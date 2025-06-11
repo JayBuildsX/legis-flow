@@ -1,0 +1,546 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  username            String               @unique
+  email               String               @unique
+  passwordHash        String
+  firstName           String?
+  lastName            String?
+  status              UserStatus           @default(PENDING)
+  phoneNumber         String?
+  lastLogin           DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  createdById         String?
+  updatedById         String?
+  auditLogs           AuditLog[]
+  certificates        Certificate[]
+  uploadedAttachments DocumentAttachment[]
+  comments            DocumentComment[]    @relation("UserComments")
+  resolvedComments    DocumentComment[]    @relation("CommentResolvedBy")
+  createdVersions     DocumentVersion[]
+  documents           Document[]           @relation("DocumentCreatedBy")
+  modifiedDocuments   Document[]           @relation("DocumentModifiedBy")
+  organizations       OrganizationUser[]
+  signatures          Signature[]
+  stepsAssignedBy     StepAssignment[]     @relation("StepAssignedBy")
+  stepsAssignedTo     StepAssignment[]     @relation("StepAssignedTo")
+  stepsActionBy       StepHistory[]
+  notifications       SystemNotification[]
+  userRoles           UserRole[]
+  createdBy           User?                @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers        User[]               @relation("UserCreatedBy")
+  updatedBy           User?                @relation("UserUpdatedBy", fields: [updatedById], references: [id])
+  updatedUsers        User[]               @relation("UserUpdatedBy")
+
+  @@map("users")
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  code            String           @unique
+  description     String?
+  resourceType    String
+  action          String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime  @default(now())
+  assignedBy String
+  validFrom  DateTime  @default(now())
+  validTo    DateTime?
+  role       Role      @relation(fields: [roleId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime   @default(now())
+  assignedBy   String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Organization {
+  id          String             @id @default(uuid())
+  name        String
+  description String?
+  orgType     OrgType
+  parentId    String?
+  status      OrgStatus          @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  documents   Document[]
+  users       OrganizationUser[]
+  parent      Organization?      @relation("OrganizationHierarchy", fields: [parentId], references: [id])
+  children    Organization[]     @relation("OrganizationHierarchy")
+
+  @@map("organizations")
+}
+
+model OrganizationUser {
+  organizationId String
+  userId         String
+  position       String?
+  isAdmin        Boolean      @default(false)
+  assignedAt     DateTime     @default(now())
+  validFrom      DateTime     @default(now())
+  validTo        DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@id([organizationId, userId])
+  @@map("organization_users")
+}
+
+model Document {
+  id                    String               @id @default(uuid())
+  title                 String
+  referenceNumber       String               @unique
+  documentTypeId        String
+  status                DocumentStatus       @default(DRAFT)
+  version               Int                  @default(1)
+  currentWorkflowStepId String?
+  language              String
+  createdById           String
+  ownerOrganizationId   String
+  confidentiality       Confidentiality      @default(PUBLIC)
+  creationDate          DateTime             @default(now())
+  lastModifiedDate      DateTime             @updatedAt
+  lastModifiedById      String
+  isTemplate            Boolean              @default(false)
+  parentDocumentId      String?
+  publicationDate       DateTime?
+  effectiveDate         DateTime?
+  expirationDate        DateTime?
+  keywords              String[]
+  metadata              Json?
+  primaryFormat         String?
+  fileCount             Int                  @default(0)
+  totalSize             Int                  @default(0)
+  textExtracted         Boolean              @default(false)
+  availableFormats      String[]             @default([])
+  lastSearchIndexed     DateTime?
+  attachments           DocumentAttachment[]
+  comments              DocumentComment[]
+  documentTypes         DocumentType[]       @relation("DocumentTypeTemplate")
+  versions              DocumentVersion[]
+  workflow              DocumentWorkflow?
+  createdBy             User                 @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+  documentType          DocumentType         @relation("DocumentTypeDocuments", fields: [documentTypeId], references: [id])
+  lastModifiedBy        User                 @relation("DocumentModifiedBy", fields: [lastModifiedById], references: [id])
+  ownerOrganization     Organization         @relation(fields: [ownerOrganizationId], references: [id])
+  parentDocument        Document?            @relation("DocumentHierarchy", fields: [parentDocumentId], references: [id])
+  childDocuments        Document[]           @relation("DocumentHierarchy")
+  signatures            Signature[]
+
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id               String            @id @default(uuid())
+  documentId       String
+  versionNumber    Int
+  content          String?
+  contentFormat    String
+  createdAt        DateTime          @default(now())
+  createdById      String
+  changeSummary    String?
+  status           String
+  isMajorVersion   Boolean           @default(false)
+  checksum         String?
+  originalFilePath String?
+  originalFileType String?
+  originalFileSize Int?
+  storageLocation  String?
+  hasTextExtracted Boolean           @default(false)
+  availableFormats String[]          @default([])
+  comments         DocumentComment[]
+  convertedFiles   DocumentFile[]
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  document         Document          @relation(fields: [documentId], references: [id])
+  signatures       Signature[]
+
+  @@unique([documentId, versionNumber])
+  @@map("document_versions")
+}
+
+model DocumentFile {
+  id                String          @id @default(uuid())
+  documentVersionId String
+  format            String
+  filePath          String
+  fileSize          Int
+  mimeType          String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  isActive          Boolean         @default(true)
+  metadata          Json?
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id])
+
+  @@unique([documentVersionId, format])
+  @@map("document_files")
+}
+
+model DocumentType {
+  id              String     @id @default(uuid())
+  name            String
+  description     String?
+  workflowId      String
+  templateId      String?
+  metadataSchema  Json?
+  retentionPeriod Int?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  template        Document?  @relation("DocumentTypeTemplate", fields: [templateId], references: [id])
+  workflow        Workflow   @relation(fields: [workflowId], references: [id])
+  documents       Document[] @relation("DocumentTypeDocuments")
+
+  @@map("document_types")
+}
+
+model DocumentAttachment {
+  id           String   @id @default(uuid())
+  documentId   String
+  name         String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  uploadedAt   DateTime @default(now())
+  uploadedById String
+  description  String?
+  isDeleted    Boolean  @default(false)
+  document     Document @relation(fields: [documentId], references: [id])
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+
+  @@map("document_attachments")
+}
+
+model DocumentComment {
+  id              String            @id @default(uuid())
+  documentId      String
+  versionId       String?
+  content         String
+  createdAt       DateTime          @default(now())
+  createdById     String
+  parentCommentId String?
+  isResolved      Boolean           @default(false)
+  resolvedAt      DateTime?
+  resolvedById    String?
+  createdBy       User              @relation("UserComments", fields: [createdById], references: [id])
+  document        Document          @relation(fields: [documentId], references: [id])
+  parentComment   DocumentComment?  @relation("CommentHierarchy", fields: [parentCommentId], references: [id])
+  childComments   DocumentComment[] @relation("CommentHierarchy")
+  resolvedBy      User?             @relation("CommentResolvedBy", fields: [resolvedById], references: [id])
+  version         DocumentVersion?  @relation(fields: [versionId], references: [id])
+
+  @@map("document_comments")
+}
+
+model Workflow {
+  id                String               @id @default(uuid())
+  name              String
+  description       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  createdById       String
+  updatedById       String
+  isActive          Boolean              @default(true)
+  version           Int                  @default(1)
+  expectedDuration  Int?
+  documentTypes     DocumentType[]
+  documentWorkflows DocumentWorkflow[]
+  steps             WorkflowStep[]
+  transitions       WorkflowTransition[]
+
+  @@map("workflows")
+}
+
+model WorkflowStep {
+  id                String               @id @default(uuid())
+  workflowId        String
+  name              String
+  description       String?
+  stepOrder         Int
+  stepType          StepType
+  expectedDuration  Int?
+  isMandatory       Boolean              @default(true)
+  requiredRoleId    String?
+  requiresSignature Boolean              @default(false)
+  requiresComment   Boolean              @default(false)
+  documentWorkflows DocumentWorkflow[]
+  stepAssignments   StepAssignment[]
+  stepHistories     StepHistory[]
+  workflow          Workflow             @relation(fields: [workflowId], references: [id])
+  fromTransitions   WorkflowTransition[] @relation("FromStep")
+  toTransitions     WorkflowTransition[] @relation("ToStep")
+
+  @@map("workflow_steps")
+}
+
+model WorkflowTransition {
+  id                  String       @id @default(uuid())
+  workflowId          String
+  fromStepId          String
+  toStepId            String
+  transitionCondition String?
+  isAutomatic         Boolean      @default(false)
+  triggerEvent        String?
+  fromStep            WorkflowStep @relation("FromStep", fields: [fromStepId], references: [id])
+  toStep              WorkflowStep @relation("ToStep", fields: [toStepId], references: [id])
+  workflow            Workflow     @relation(fields: [workflowId], references: [id])
+
+  @@map("workflow_transitions")
+}
+
+model DocumentWorkflow {
+  id              String           @id @default(uuid())
+  documentId      String           @unique
+  workflowId      String
+  currentStepId   String
+  startedAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  completedAt     DateTime?
+  startedById     String
+  status          WorkflowStatus   @default(ACTIVE)
+  currentStep     WorkflowStep     @relation(fields: [currentStepId], references: [id])
+  document        Document         @relation(fields: [documentId], references: [id])
+  workflow        Workflow         @relation(fields: [workflowId], references: [id])
+  stepAssignments StepAssignment[]
+  stepHistories   StepHistory[]
+
+  @@map("document_workflows")
+}
+
+model StepAssignment {
+  id                 String           @id @default(uuid())
+  documentWorkflowId String
+  stepId             String
+  assignedToId       String
+  assignedAt         DateTime         @default(now())
+  assignedById       String
+  dueDate            DateTime?
+  completedAt        DateTime?
+  status             AssignmentStatus @default(PENDING)
+  comment            String?
+  assignedBy         User             @relation("StepAssignedBy", fields: [assignedById], references: [id])
+  assignedTo         User             @relation("StepAssignedTo", fields: [assignedToId], references: [id])
+  documentWorkflow   DocumentWorkflow @relation(fields: [documentWorkflowId], references: [id])
+  step               WorkflowStep     @relation(fields: [stepId], references: [id])
+
+  @@map("step_assignments")
+}
+
+model StepHistory {
+  id                 String           @id @default(uuid())
+  documentWorkflowId String
+  stepId             String
+  action             String
+  actionById         String
+  actionAt           DateTime         @default(now())
+  fromStatus         String
+  toStatus           String
+  comment            String?
+  metadata           Json?
+  actionBy           User             @relation(fields: [actionById], references: [id])
+  documentWorkflow   DocumentWorkflow @relation(fields: [documentWorkflowId], references: [id])
+  step               WorkflowStep     @relation(fields: [stepId], references: [id])
+
+  @@map("step_histories")
+}
+
+model Signature {
+  id                String          @id @default(uuid())
+  documentId        String
+  versionId         String
+  signedById        String
+  signedAt          DateTime        @default(now())
+  signatureType     SignatureType
+  signatureValue    String
+  certificateId     String?
+  signaturePosition Json?
+  isValid           Boolean         @default(true)
+  validationDate    DateTime        @default(now())
+  reason            String?
+  ipAddress         String?
+  metadata          Json?
+  certificate       Certificate?    @relation(fields: [certificateId], references: [id])
+  document          Document        @relation(fields: [documentId], references: [id])
+  signedBy          User            @relation(fields: [signedById], references: [id])
+  version           DocumentVersion @relation(fields: [versionId], references: [id])
+
+  @@map("signatures")
+}
+
+model Certificate {
+  id               String            @id @default(uuid())
+  userId           String
+  issuer           String
+  serialNumber     String
+  validFrom        DateTime
+  validTo          DateTime
+  publicKey        String
+  status           CertificateStatus @default(ACTIVE)
+  revocationDate   DateTime?
+  revocationReason String?
+  createdAt        DateTime          @default(now())
+  user             User              @relation(fields: [userId], references: [id])
+  signatures       Signature[]
+
+  @@map("certificates")
+}
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  eventType    String
+  entityType   String
+  entityId     String
+  userId       String
+  timestamp    DateTime    @default(now())
+  ipAddress    String?
+  userAgent    String?
+  action       String
+  details      Json?
+  status       AuditStatus
+  errorMessage String?
+  user         User        @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SystemNotification {
+  id                String               @id @default(uuid())
+  userId            String
+  title             String
+  message           String
+  notificationType  String
+  relatedEntityType String?
+  relatedEntityId   String?
+  createdAt         DateTime             @default(now())
+  isRead            Boolean              @default(false)
+  readAt            DateTime?
+  expirationDate    DateTime?
+  priority          NotificationPriority @default(MEDIUM)
+  user              User                 @relation(fields: [userId], references: [id])
+
+  @@map("system_notifications")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum OrgType {
+  MINISTRY
+  PARLIAMENT
+  COUNCIL
+  COURT
+  OTHER
+}
+
+enum OrgStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DocumentStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+  REJECTED
+}
+
+enum Confidentiality {
+  PUBLIC
+  RESTRICTED
+  CONFIDENTIAL
+  SECRET
+}
+
+enum StepType {
+  VALIDATION
+  EDITION
+  REVIEW
+  SIGNATURE
+  NOTIFICATION
+  PUBLICATION
+}
+
+enum WorkflowStatus {
+  ACTIVE
+  COMPLETED
+  SUSPENDED
+  TERMINATED
+}
+
+enum AssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  ESCALATED
+}
+
+enum SignatureType {
+  ELECTRONIC
+  DIGITAL
+  QUALIFIED
+}
+
+enum CertificateStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}

@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #F7FAFC;
+    --foreground: #1A202C;
+
+    --card: #FFFFFF;
+    --card-foreground: #1A202C;
+ 
+    --popover: #FFFFFF;
+    --popover-foreground: #1A202C;
+ 
+    --primary: #2C5282;
+    --primary-foreground: #FFFFFF;
+ 
+    --secondary: #38A169;
+    --secondary-foreground: #FFFFFF;
+ 
+    --muted: #EDF2F7;
+    --muted-foreground: #718096;
+ 
+    --accent: #EDF2F7;
+    --accent-foreground: #1A202C;
+ 
+    --destructive: #E53E3E;
+    --destructive-foreground: #FFFFFF;
+
+    --border: #E2E8F0;
+    --input: #E2E8F0;
+    --ring: #2C5282;
+ 
+    --radius: 0.5rem;
+  }
+
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+  
+  /* Typography scale */
+  h1, .h1 {
+    @apply text-3xl font-bold text-slate-900 tracking-tight;
+  }
+  
+  h2, .h2 {
+    @apply text-2xl font-bold text-slate-900;
+  }
+  
+  h3, .h3 {
+    @apply text-xl font-semibold text-slate-900;
+  }
+  
+  h4, .h4 {
+    @apply text-lg font-semibold text-slate-900;
+  }
+  
+  p {
+    @apply text-slate-700 leading-normal;
+  }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 10px;
+  transition: background-color 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #a0aec0;
+}
+
+/* Document selection */
+::selection {
+  background-color: rgba(44, 82, 130, 0.15);
+  color: #2C5282;
+}
+
+@layer components {
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5;
+  }
+  
+  .status-indicator {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  .status-indicator-active {
+    @apply bg-secondary-500;
+  }
+  
+  .status-indicator-pending {
+    @apply bg-accent-orange-500;
+  }
+  
+  .status-indicator-error {
+    @apply bg-accent-red-500;
+  }
+  
+  .prose-custom {
+    @apply prose prose-slate prose-headings:text-slate-900 prose-p:text-slate-700;
+  }
+}
+
+/* Focus styles */
+@layer utilities {
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+  
+  .subtle-focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-200;
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}
