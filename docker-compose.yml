@@ -4,46 +4,48 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    volumes:
-      - .:/app
-      - /app/node_modules
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/legis_flow?schema=public
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/legisflow
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-    command: sh -c "npx prisma generate && npm run dev"
+    volumes:
+      - .:/app
+      - /app/node_modules
     depends_on:
-      - db
+      - postgres
       - elasticsearch
-  
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: legis_flow
+
+  postgres:
+    image: postgres:15
     ports:
       - "5432:5432"
+    environment:
+      POSTGRES_DB: legisflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - cluster.name=legis-flow-cluster
+      - node.name=legis-flow-node
+      - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
 
 volumes:
   postgres_data:

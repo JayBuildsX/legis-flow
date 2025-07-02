@@ -133,7 +133,7 @@ export default function SearchBox({
     const parts = text.split(regex);
     
     return parts.map((part, i) => 
-      regex.test(part) ? <mark key={i} className="bg-primary/20 font-medium">{part}</mark> : part
+      regex.test(part) ? <mark key={i} className="bg-blue-100 text-blue-800 font-medium">{part}</mark> : part
     );
   };
   
@@ -151,7 +151,7 @@ export default function SearchBox({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => searchTerm.length >= 2 && setShowSuggestions(true)}
-            className="py-2 pl-10 pr-10 w-full text-sm rounded-md border border-input bg-background focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            className="w-full py-2.5 pl-10 pr-10 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
             placeholder={placeholder}
             autoComplete="off"
           />
@@ -172,11 +172,16 @@ export default function SearchBox({
       {showSuggestions && (
         <div
           ref={suggestionsRef}
-          className="absolute mt-1 w-full z-50 bg-white dark:bg-slate-950 rounded-md shadow-lg border border-border max-h-64 overflow-auto"
+          className="absolute mt-2 w-full z-50 bg-white rounded-lg shadow-xl border border-neutral-200 max-h-64 overflow-auto"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(10px)',
+          }}
         >
           {loading ? (
-            <div className="p-2 text-center text-sm text-muted-foreground">
-              Chargement...
+            <div className="p-4 text-center text-sm text-neutral-500">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+              Recherche en cours...
             </div>
           ) : suggestions.length > 0 ? (
             <ul>
@@ -185,12 +190,12 @@ export default function SearchBox({
                   <button
                     type="button"
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-left px-4 py-2 hover:bg-muted flex flex-col"
+                    className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors duration-200 flex flex-col border-b border-neutral-100 last:border-b-0"
                   >
-                    <span className="font-medium">
+                    <span className="font-medium text-neutral-900">
                       {highlightMatch(suggestion.title, searchTerm)}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-blue-600 mt-1">
                       {highlightMatch(suggestion.reference, searchTerm)}
                     </span>
                   </button>
@@ -198,8 +203,9 @@ export default function SearchBox({
               ))}
             </ul>
           ) : searchTerm.length >= 2 ? (
-            <div className="p-2 text-center text-sm text-muted-foreground">
-              Aucun document trouvé
+            <div className="p-4 text-center text-sm text-neutral-500">
+              <LucideSearch className="h-5 w-5 text-neutral-400 mx-auto mb-2" />
+              Aucun document trouvé pour "{searchTerm}"
             </div>
           ) : null}
         </div>

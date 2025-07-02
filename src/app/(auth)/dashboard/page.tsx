@@ -16,7 +16,8 @@ import {
   LucideCalendarClock, 
   LucideChevronRight, 
   LucideEye,
-  LucideCheck
+  LucideCheck,
+  LucideWorkflow
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,23 +77,40 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon, description, trend, href }: StatCardProps) => {
+  const CardWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (href) {
+      return (
+        <Link href={href} className="block">
+          <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer border-neutral-200 hover:border-blue-300 bg-white">
+            {children}
+          </Card>
+        </Link>
+      );
+    }
+    return (
+      <Card className="border-neutral-200 bg-white">
+        {children}
+      </Card>
+    );
+  };
+
   return (
-    <Card hoverable className="transition-all duration-300">
+    <CardWrapper>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardDescription>{title}</CardDescription>
-          <div className="rounded-lg bg-primary-100 p-2 text-primary-600">{icon}</div>
+          <CardDescription className="text-neutral-600 font-medium">{title}</CardDescription>
+          <div className="rounded-lg bg-blue-100 p-2.5 text-blue-600">{icon}</div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-2xl font-bold text-slate-900">{value}</p>
-            {description && <p className="text-xs text-slate-500 mt-1">{description}</p>}
+            <p className="text-3xl font-bold text-neutral-900">{value}</p>
+            {description && <p className="text-sm text-neutral-500 mt-1">{description}</p>}
           </div>
           {trend && (
-            <div className={`flex items-center gap-1 text-xs font-medium ${
-              trend.positive ? 'text-secondary-600' : 'text-accent-red-600'
+            <div className={`flex items-center gap-1 text-sm font-medium ${
+              trend.positive ? 'text-green-600' : 'text-red-600'
             }`}>
               {trend.positive ? <LucideArrowUp size={14} /> : <LucideArrowUp size={14} className="rotate-180" />}
               {trend.value}
@@ -100,7 +118,7 @@ const StatCard = ({ title, value, icon, description, trend, href }: StatCardProp
           )}
         </div>
       </CardContent>
-    </Card>
+    </CardWrapper>
   );
 };
 
@@ -109,12 +127,13 @@ interface TaskItemProps {
   dueDate: string;
   priority: 'low' | 'medium' | 'high';
   type: string;
+  documentId?: string;
 }
 
-const TaskItem = ({ title, dueDate, priority, type }: TaskItemProps) => {
+const TaskItem = ({ title, dueDate, priority, type, documentId }: TaskItemProps) => {
   const priorityVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    low: "default",
-    medium: "secondary",
+    low: "outline",
+    medium: "default", 
     high: "destructive",
   };
 
@@ -124,28 +143,37 @@ const TaskItem = ({ title, dueDate, priority, type }: TaskItemProps) => {
     high: 'Haute',
   };
 
+  const priorityColors = {
+    low: 'text-neutral-600 bg-neutral-50 border-neutral-300',
+    medium: 'text-amber-700 bg-amber-50 border-amber-300',
+    high: 'text-red-700 bg-red-50 border-red-300',
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm hover:border-primary-200 hover:bg-slate-50 transition-all duration-200">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200">
       <div className="flex items-center gap-3">
-        <div className="rounded-md bg-primary-100 p-2 text-primary-600">
+        <div className="rounded-lg bg-blue-100 p-2.5 text-blue-600">
           <LucideFile size={16} />
         </div>
         <div>
-          <h4 className="font-medium text-slate-900">{title}</h4>
-          <p className="text-xs text-slate-600">{type}</p>
+          <h4 className="font-semibold text-neutral-900">{title}</h4>
+          <p className="text-sm text-neutral-600">{type}</p>
         </div>
       </div>
-      <div className="flex items-center gap-3 ml-auto mt-2 sm:mt-0">
-        <Badge variant={priorityVariants[priority]}>
+      <div className="flex items-center gap-3 ml-auto">
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${priorityColors[priority]}`}>
           {priorityLabels[priority]}
-        </Badge>
-        <div className="flex items-center gap-1.5 text-sm text-slate-600">
-          <LucideCalendar size={14} className="hidden sm:block" />
-          {dueDate}
+        </span>
+        <div className="flex items-center gap-2 text-sm text-neutral-600 bg-neutral-100 px-3 py-1.5 rounded-md">
+          <LucideCalendar size={14} />
+          <span>{dueDate}</span>
         </div>
-        <Button size="sm" variant="outline" rightIcon={<LucideArrowRight size={14} />}>
-          Voir
-        </Button>
+        <Link href={documentId ? `/documents/${documentId}` : '/documents'}>
+          <Button size="sm" className="btn-primary">
+            <LucideEye size={14} className="mr-1" />
+            Voir
+          </Button>
+        </Link>
       </div>
     </div>
   );
@@ -270,46 +298,54 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
       {/* Welcome message */}
       {showWelcome && !isLoading && (
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 flex items-center justify-between animate-fade">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
-              <LucideCheckCircle className="text-primary-600" size={18} />
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 flex items-center justify-between animate-fade shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <LucideCheckCircle className="text-blue-600" size={20} />
             </div>
             <div>
-              <h4 className="font-medium text-primary-900">Bienvenue sur LEGIS-FLOW</h4>
-              <p className="text-sm text-primary-700">Voici votre tableau de bord actualisé avec les dernières statistiques.</p>
+              <h4 className="font-semibold text-blue-900 text-lg">Bienvenue sur LEGIS-FLOW</h4>
+              <p className="text-blue-700 mt-1">Votre tableau de bord actualisé avec les dernières statistiques et activités.</p>
             </div>
           </div>
           <button 
             onClick={() => setShowWelcome(false)} 
-            className="text-primary-500 hover:text-primary-700"
+            className="text-blue-500 hover:text-blue-700 text-xl font-light hover:bg-blue-100 rounded-lg w-8 h-8 flex items-center justify-center transition-colors"
             aria-label="Fermer"
           >
-            &times;
+            ×
           </button>
         </div>
       )}
       
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Tableau de bord</h2>
-          <p className="text-slate-500 mt-1">Bienvenue, voici votre aperçu quotidien</p>
+          <h2 className="text-3xl font-bold text-neutral-900">Tableau de bord</h2>
+          <p className="text-neutral-600 mt-2 text-lg">Bienvenue, voici votre aperçu quotidien</p>
+          <div className="flex items-center gap-2 mt-1 text-sm text-neutral-500">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            Dernière mise à jour: {new Date().toLocaleString('fr-FR')}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" leftIcon={<LucideDownload size={14} />}>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" className="btn-secondary">
+            <LucideDownload size={14} className="mr-2" />
             Exporter
           </Button>
           <Link href="/documents/upload">
-            <Button size="sm">Nouveau document</Button>
+            <Button size="sm" className="btn-primary">
+              <LucideFileText size={14} className="mr-2" />
+              Nouveau document
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading ? (
           <>
             <StatSkeletonCard />
@@ -320,27 +356,35 @@ export default function Dashboard() {
         ) : (
           <>
             <StatCard
-              title="Documents"
+              title="Total Documents"
               value={stats.total.toString()}
-              icon={<LucideFileText className="h-5 w-5 text-indigo-600" />}
+              icon={<LucideFileText className="h-6 w-6" />}
+              description="Documents dans le système"
+              trend={{ value: "+12%", positive: true }}
               href="/documents"
             />
             <StatCard
               title="En cours"
               value={stats.inProgress.toString()}
-              icon={<LucideFileClock className="h-5 w-5 text-amber-600" />}
+              icon={<LucideFileClock className="h-6 w-6" />}
+              description="Documents en traitement"
+              trend={{ value: "+5%", positive: true }}
               href="/documents?status=in_progress"
             />
             <StatCard
               title="Terminés"
               value={stats.completed.toString()}
-              icon={<LucideCheck className="h-5 w-5 text-emerald-600" />}
+              icon={<LucideCheck className="h-6 w-6" />}
+              description="Documents finalisés"
+              trend={{ value: "+8%", positive: true }}
               href="/documents?status=completed"
             />
             <StatCard
               title="En attente"
               value={stats.pending.toString()}
-              icon={<LucideCalendarClock className="h-5 w-5 text-rose-600" />}
+              icon={<LucideCalendarClock className="h-6 w-6" />}
+              description="En attente de validation"
+              trend={{ value: "-3%", positive: false }}
               href="/documents?status=pending"
             />
           </>
@@ -351,16 +395,27 @@ export default function Dashboard() {
       {isLoading ? (
         <SkeletonCard header headerHeight={8} lines={5} />
       ) : (
-        <Card>
+        <Card className="border-neutral-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Tâches en attente</CardTitle>
-              <Button variant="link" size="sm" rightIcon={<LucideArrowRight size={14} />}>
-                Voir toutes les tâches
-              </Button>
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 p-2.5 rounded-lg">
+                  <LucideCalendarClock className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-neutral-900">Tâches prioritaires</CardTitle>
+                  <p className="text-neutral-600 text-sm mt-1">Actions requises aujourd'hui</p>
+                </div>
+              </div>
+              <Link href="/workflows">
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                  Voir toutes les tâches
+                  <LucideChevronRight size={16} className="ml-1" />
+                </Button>
+              </Link>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {tasks.length > 0 ? (
               tasks.slice(0, 3).map(task => (
                 <TaskItem
@@ -369,29 +424,38 @@ export default function Dashboard() {
                   dueDate={task.dueDate ? new Date(task.dueDate).toLocaleDateString('fr-FR') : 'Non défini'}
                   priority={task.priority}
                   type={task.documentTitle}
+                  documentId={task.documentId}
                 />
               ))
             ) : (
-              <>
-                <TaskItem
-                  title="Loi de finances 2024"
-                  dueDate="Aujourd'hui"
-                  priority="high"
-                  type="Validation juridique"
-                />
-                <TaskItem
-                  title="Décret sur la santé publique"
-                  dueDate="Demain"
-                  priority="medium"
-                  type="Révision"
-                />
-                <TaskItem
-                  title="Arrêté ministériel"
-                  dueDate="Dans 3 jours"
-                  priority="low"
-                  type="Signature"
-                />
-              </>
+              <div className="text-center py-8">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="bg-orange-100 p-4 rounded-full">
+                    <LucideCalendarClock className="h-8 w-8 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 mb-2">Aucune tâche prioritaire</h3>
+                    <p className="text-neutral-600 max-w-md">
+                      Parfait ! Vous n'avez actuellement aucune tâche urgente à traiter. 
+                      Les nouvelles tâches apparaîtront ici au fur et à mesure.
+                    </p>
+                  </div>
+                  <div className="flex gap-3 mt-2">
+                    <Link href="/documents/nouveau">
+                      <Button size="sm" className="btn-primary">
+                        <LucideFileText size={14} className="mr-2" />
+                        Créer un document
+                      </Button>
+                    </Link>
+                    <Link href="/workflows">
+                      <Button size="sm" variant="outline" className="btn-secondary">
+                        <LucideWorkflow size={14} className="mr-2" />
+                        Voir workflows
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -401,67 +465,95 @@ export default function Dashboard() {
       {isLoading ? (
         <SkeletonCard header headerHeight={8} lines={7} />
       ) : (
-        <Card>
+        <Card className="border-neutral-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Documents récents</CardTitle>
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2.5 rounded-lg">
+                  <LucideFileText className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-neutral-900">Documents récents</CardTitle>
+                  <p className="text-neutral-600 text-sm mt-1">Dernières modifications</p>
+                </div>
+              </div>
               <Link href="/documents">
-                <Button variant="link" size="sm" rightIcon={<LucideArrowRight size={14} />}>
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                   Voir tous les documents
+                  <LucideChevronRight size={16} className="ml-1" />
                 </Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent className="overflow-auto">
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="border border-neutral-200 rounded-lg overflow-hidden bg-neutral-50/50">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Référence</TableHead>
-                    <TableHead className="hidden md:table-cell">Titre</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="hidden sm:table-cell">Date de modification</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className="border-b border-neutral-200">
+                    <TableHead className="text-neutral-700 font-semibold">Référence</TableHead>
+                    <TableHead className="hidden md:table-cell text-neutral-700 font-semibold">Titre</TableHead>
+                    <TableHead className="text-neutral-700 font-semibold">Statut</TableHead>
+                    <TableHead className="hidden sm:table-cell text-neutral-700 font-semibold">Date de modification</TableHead>
+                    <TableHead className="text-neutral-700 font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentDocuments.length > 0 ? (
                     recentDocuments.map((doc) => (
-                      <TableRow key={doc.id} className="border-b hover:bg-slate-50">
-                        <TableCell className="py-3 px-2 text-sm text-slate-600">{doc.reference || 'N/A'}</TableCell>
-                        <TableCell className="py-3 px-2">
-                          <Link href={`/documents/${doc.id}`} className="text-primary hover:underline">
+                      <TableRow key={doc.id} className="border-b border-neutral-100 hover:bg-blue-50/50 transition-colors">
+                        <TableCell className="py-3 px-4 text-sm font-medium text-neutral-700">{doc.reference || 'N/A'}</TableCell>
+                        <TableCell className="py-3 px-4">
+                          <Link href={`/documents/${doc.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
                             {doc.title}
                           </Link>
                         </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={getStatusBadgeVariant(doc.status)}
-                          >
+                        <TableCell className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                            doc.status === 'APPROVED' 
+                              ? 'bg-green-100 text-green-700 border border-green-200' 
+                              : doc.status === 'IN_PROGRESS'
+                              ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                              : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
+                          }`}>
                             {getStatusDisplayText(doc.status)}
-                          </Badge>
+                          </span>
                         </TableCell>
-                        <TableCell className="py-3 px-2 text-sm text-slate-600">
+                        <TableCell className="py-3 px-4 text-sm text-neutral-600">
                           {new Date(doc.updatedAt).toLocaleDateString('fr-FR')}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link href={`/documents/${doc.id}`}>
+                            <Link href={`/documents/${doc.id}`}>
+                              <Button variant="ghost" size="sm" className="text-neutral-600 hover:text-blue-600 hover:bg-blue-50">
                                 <LucideEye className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <LucideDownload className="h-4 w-4" />
-                            </Button>
+                              </Button>
+                            </Link>
+                            <Link href={`/documents/${doc.id}/download`}>
+                              <Button variant="ghost" size="sm" className="text-neutral-600 hover:text-green-600 hover:bg-green-50">
+                                <LucideDownload className="h-4 w-4" />
+                              </Button>
+                            </Link>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-6">
-                        Aucun document récent
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="bg-neutral-100 p-3 rounded-full">
+                            <LucideFileText className="h-6 w-6 text-neutral-400" />
+                          </div>
+                          <div>
+                            <p className="text-neutral-600 font-medium">Aucun document récent</p>
+                            <p className="text-neutral-500 text-sm">Commencez par créer votre premier document</p>
+                          </div>
+                          <Link href="/documents/nouveau">
+                            <Button size="sm" className="btn-primary mt-2">
+                              Créer un document
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}

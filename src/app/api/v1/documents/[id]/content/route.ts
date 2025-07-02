@@ -42,7 +42,7 @@ let prisma = null;
  */
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication (commented out for testing)
@@ -57,8 +57,9 @@ export async function GET(
     }
     */
 
-    // Correctly extract params.id
-    const documentId = context.params.id;
+    // Correctly extract params.id for Next.js 15
+    const params = await context.params;
+    const documentId = params.id;
     console.log(`Fetching content for document: ${documentId}`);
     
     return NextResponse.json({
@@ -79,7 +80,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication
@@ -92,8 +93,9 @@ export async function PUT(
       );
     }
     
-    // Correctly extract params.id
-    const documentId = context.params.id;
+    // Correctly extract params.id for Next.js 15
+    const params = await context.params;
+    const documentId = params.id;
     const body = await request.json();
     
     if (!body.content) {

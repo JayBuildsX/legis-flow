@@ -205,7 +205,7 @@ export default function DocumentDetail() {
               {document.reference}
             </span>
             <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-              {document.type.replace(/'/g, "&apos;")}
+              {document.type?.replace(/'/g, "&apos;") || 'Type non défini'}
             </span>
             {getStatusBadge(document.status)}
           </div>

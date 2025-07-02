@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationDropdown from '@/components/notifications/NotificationDropdown';
+import SearchBox from '@/components/molecules/SearchBox';
 
 interface SidebarItemProps {
   href: string;
@@ -31,13 +33,13 @@ const SidebarItem = ({ href, icon, label, active }: SidebarItemProps) => {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-md px-3 py-2.5 transition-all duration-200 ${
+      className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-all duration-200 ${
         active
-          ? 'bg-primary-100 text-primary-700 font-medium shadow-sm border-l-2 border-primary-500'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-primary-600'
+          ? 'bg-blue-50 text-blue-700 font-medium shadow-sm border-l-4 border-blue-600'
+          : 'text-neutral-600 hover:bg-neutral-100 hover:text-blue-600'
       }`}
     >
-      <div className={`text-lg ${active ? 'text-primary-600' : 'text-slate-500'}`}>{icon}</div>
+      <div className={`text-lg ${active ? 'text-blue-600' : 'text-neutral-500'}`}>{icon}</div>
       <span className="text-sm font-medium">{label}</span>
     </Link>
   );
@@ -65,9 +67,23 @@ export default function AuthLayout({
     // Redirect is handled in the AuthContext
   };
 
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuOpen) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [userMenuOpen]);
+
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen bg-slate-50 font-sans">
+      <div className="flex min-h-screen bg-neutral-50 font-sans">
         {/* Mobile menu overlay */}
         {mobileMenuOpen && (
           <div 
@@ -76,40 +92,45 @@ export default function AuthLayout({
           />
         )}
 
+        {/* User menu overlay to prevent dropdown overlap */}
+        {userMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-transparent z-40"
+            onClick={(e) => {
+              e.stopPropagation();
+              setUserMenuOpen(false);
+            }}
+          />
+        )}
+
         {/* Sidebar */}
         <aside 
-          className={`fixed inset-y-0 left-0 w-64 border-r border-slate-200 bg-white shadow-md z-40 
+          className={`fixed inset-y-0 left-0 w-64 border-r border-neutral-200 bg-white shadow-lg z-40 
             transition-transform duration-300 ease-in-out md:translate-x-0 md:relative
             ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
-          <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4 bg-gradient-to-r from-primary-600 to-primary-700">
+          <div className="flex h-16 items-center justify-between border-b border-neutral-200 px-4 bg-gradient-to-r from-blue-600 to-blue-700">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="rounded-md bg-white p-1.5 text-primary-700 font-bold">LF</div>
+              <div className="rounded-lg bg-white p-2 text-blue-700 font-bold text-sm shadow-sm">LF</div>
               <span className="text-lg font-semibold text-white">LEGIS-FLOW</span>
             </Link>
             <button 
-              className="rounded-full p-1.5 text-white md:hidden hover:bg-primary-700"
+              className="rounded-full p-2 text-white md:hidden hover:bg-blue-700 transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               <LucideX size={20} />
             </button>
           </div>
           
-          <div className="px-3 py-3 border-b border-slate-200">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <LucideSearch className="h-4 w-4 text-slate-400" />
-              </div>
-              <input 
-                type="search" 
-                className="w-full py-2 pl-10 pr-3 text-sm rounded-md border border-slate-200 bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Rechercher..." 
-              />
-            </div>
+          <div className="px-4 py-4 border-b border-neutral-200">
+            <SearchBox 
+              placeholder="Rechercher documents, templates..."
+              className="w-full"
+            />
           </div>
           
-          <nav className="p-3 flex-1 overflow-y-auto">
-            <div className="space-y-0.5">
+          <nav className="p-4 flex-1 overflow-y-auto">
+            <div className="space-y-1">
               <SidebarItem 
                 href="/dashboard" 
                 icon={<LucideHome size={18} />} 
@@ -143,34 +164,48 @@ export default function AuthLayout({
             </div>
           </nav>
           
-          <div className="mt-auto border-t border-slate-200 p-3">
+          <div className="mt-auto border-t border-neutral-200 p-4">
             <div 
-              className="relative group flex items-center gap-3 rounded-md px-3 py-2 bg-slate-50 cursor-pointer hover:bg-slate-100"
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="relative group flex items-center gap-3 rounded-lg px-3 py-3 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors duration-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                setUserMenuOpen(!userMenuOpen);
+              }}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-center text-sm font-medium text-primary-700 border border-primary-200">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-center text-sm font-medium text-blue-700 border-2 border-blue-200">
                 {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'UN'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{user?.name || 'Utilisateur'}</p>
-                <p className="text-xs text-slate-500 truncate">{user?.email || 'email@example.com'}</p>
+                <p className="text-sm font-medium text-neutral-800 truncate">{user?.name || 'Utilisateur'}</p>
+                <p className="text-xs text-neutral-500 truncate">{user?.email || 'email@example.com'}</p>
               </div>
-              <LucideChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              <LucideChevronDown className={`h-4 w-4 text-neutral-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
               
-              {/* User dropdown menu */}
+              {/* User dropdown menu with proper background and z-index */}
               {userMenuOpen && (
-                <div className="absolute bottom-full left-0 w-full mb-1 bg-white rounded-md shadow-lg border border-slate-200 overflow-hidden z-50">
-                  <div className="py-1">
-                    <Link href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                      <LucideSettings size={16} />
-                      <span>Profil</span>
+                <div 
+                  className="absolute bottom-full left-0 w-full mb-2 bg-white rounded-lg shadow-xl border border-neutral-200 overflow-hidden z-50"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="py-2">
+                    <Link href="/profile" className="flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200">
+                      <div className="p-1 rounded bg-neutral-100 group-hover:bg-blue-100">
+                        <LucideSettings size={16} />
+                      </div>
+                      <span className="font-medium">Mon profil</span>
                     </Link>
                     <button 
                       onClick={handleLogout}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-slate-100 w-full text-left"
+                      className="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 w-full text-left transition-colors duration-200"
                     >
-                      <LucideLogOut size={16} />
-                      <span>Déconnexion</span>
+                      <div className="p-1 rounded bg-red-100">
+                        <LucideLogOut size={16} />
+                      </div>
+                      <span className="font-medium">Déconnexion</span>
                     </button>
                   </div>
                 </div>
@@ -182,32 +217,35 @@ export default function AuthLayout({
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 shadow-sm z-10">
+          <header className="flex h-16 items-center justify-between border-b border-neutral-200 bg-white px-4 md:px-6 shadow-sm z-10">
             <div className="flex items-center">
               <button 
-                className="mr-4 rounded-full p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+                className="mr-4 rounded-lg p-2 text-neutral-600 hover:bg-neutral-100 md:hidden transition-colors"
                 onClick={() => setMobileMenuOpen(true)}
               >
                 <LucideMenu size={20} />
               </button>
-              <h1 className="text-xl font-semibold text-slate-800">
-                {pathname === '/dashboard' && 'Tableau de bord'}
-                {pathname.startsWith('/documents') && 'Documents'}
-                {pathname.startsWith('/templates') && 'Modèles'}
-                {pathname.startsWith('/workflows') && 'Workflows'}
-                {pathname.startsWith('/admin') && 'Administration'}
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <button className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 transition-colors">
-                  <LucideBell size={18} />
-                  <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-accent-red-500 ring-2 ring-white"></span>
-                </button>
+              <div>
+                <h1 className="text-xl font-semibold text-neutral-800">
+                  {pathname === '/dashboard' && 'Tableau de bord'}
+                  {pathname.startsWith('/documents') && 'Documents'}
+                  {pathname.startsWith('/templates') && 'Modèles'}
+                  {pathname.startsWith('/workflows') && 'Workflows'}
+                  {pathname.startsWith('/admin') && 'Administration'}
+                </h1>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-neutral-500">En ligne</span>
+                </div>
               </div>
-              <button className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 transition-colors">
-                <LucideSettings size={18} />
-              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <NotificationDropdown />
+              <Link href="/profile">
+                <button className="rounded-lg bg-neutral-100 p-2.5 text-neutral-600 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200">
+                  <LucideSettings size={18} />
+                </button>
+              </Link>
             </div>
           </header>
 
