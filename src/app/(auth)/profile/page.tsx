@@ -19,7 +19,7 @@ export default function ProfilePage() {
     email: 'admin@example.com',
     organization: 'Ministère de l\'Économie et des Finances',
     role: 'Administrateur',
-    phone: '+33 1 23 45 67 89',
+    phone: '+212 6 12 34 56 78',
     bio: 'Responsable de la gestion documentaire et des workflows législatifs.'
   });
 
