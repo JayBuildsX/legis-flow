@@ -120,7 +120,18 @@ class AuthService {
     const token = this.getToken();
     console.log('[DEBUG] verifySession - Token exists:', !!token);
     
-    if (!token) return null;
+    if (!token) {
+      console.log('[DEBUG] verifySession - No token found, user not authenticated');
+      return null;
+    }
+
+    // Check if token is valid format (not empty, null, or 'undefined' string)
+    if (token === 'undefined' || token.trim() === '') {
+      console.log('[DEBUG] verifySession - Invalid token format, clearing storage');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      return null;
+    }
 
     try {
       // Use full URL path to avoid URL parsing issues
@@ -180,6 +191,9 @@ class AuthService {
         // Handle specific error cases
         if (error.response?.status === 401) {
           console.log('[DEBUG] verifySession - Unauthorized, clearing session');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          return null;
         }
       }
       

@@ -35,6 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Function to verify session
   const verifyUserSession = async () => {
     try {
+      // Check if we have a token first to avoid unnecessary API calls
+      if (!authService.getToken()) {
+        console.log('[AuthContext] No token found, user not authenticated');
+        setUser(null);
+        setIsAuthenticated(false);
+        return false;
+      }
+
       // Verify session with server
       const verifiedUser = await authService.verifySession();
       if (verifiedUser) {
@@ -48,7 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
     } catch (error) {
-      console.error('Session verification error:', error);
+      console.log('[AuthContext] Session verification failed, clearing auth state');
+      // Don't log this as an error since 401 is expected when not authenticated
       setUser(null);
       setIsAuthenticated(false);
       return false;
@@ -61,20 +70,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         
-        // Try to load user from storage first for immediate UI feedback
-        const storedUser = authService.getCurrentUser();
-        if (storedUser) {
-          setUser(storedUser);
-          setIsAuthenticated(true);
-        }
-        
-        // Verify session with server
-        const sessionValid = await verifyUserSession();
-        
-        if (!sessionValid && storedUser) {
-          // If server verification fails but we had a stored user,
-          // clear the session and redirect to login
-          router.push('/login');
+        // Only try to load user if we have a valid token
+        if (authService.getToken()) {
+          // Try to load user from storage first for immediate UI feedback
+          const storedUser = authService.getCurrentUser();
+          if (storedUser) {
+            setUser(storedUser);
+            setIsAuthenticated(true);
+          }
+          
+          // Verify session with server
+          const sessionValid = await verifyUserSession();
+          
+          if (!sessionValid && storedUser) {
+            // If server verification fails but we had a stored user,
+            // clear the session and redirect to login
+            console.log('[AuthContext] Session invalid, redirecting to login');
+            router.push('/login');
+          }
+        } else {
+          // No token, user is not authenticated
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth loading error:', error);
@@ -87,7 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Set up periodic session verification (every 5 minutes)
     sessionCheckInterval.current = setInterval(() => {
-      if (authService.isAuthenticated()) {
+      if (authService.isAuthenticated() && authService.getToken()) {
+        console.log('[AuthContext] Periodic session check');
         verifyUserSession();
       }
     }, 5 * 60 * 1000);
