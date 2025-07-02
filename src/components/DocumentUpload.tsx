@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileIcon, X as XIcon, Upload as UploadIcon } from 'lucide-react';
-import { Document, DocumentType } from '@prisma/client';
+import { Document } from '@/generated/prisma';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// Define interfaces
+interface DocumentType {
+  id: string;
+  name: string;
+  description?: string | null;
+}
 
 // Define Confidentiality enum for the front-end
 enum Confidentiality {

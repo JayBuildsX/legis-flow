@@ -35,7 +35,8 @@ export async function GET(
         createdBy: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         }
@@ -57,10 +58,10 @@ export async function GET(
       createdAt: version.createdAt.toISOString(),
       author: {
         id: version.createdBy.id,
-        name: version.createdBy.name,
+        name: `${version.createdBy.firstName || ''} ${version.createdBy.lastName || ''}`.trim(),
         email: version.createdBy.email
       },
-      changeDescription: version.changeDescription || "",
+      changeDescription: version.changeSummary || "",
       status: version.status.toLowerCase()
     };
     
@@ -112,7 +113,7 @@ export async function PUT(
     // Prepare update data
     const updateData: any = {};
     if (body.changeDescription !== undefined) {
-      updateData.changeDescription = body.changeDescription;
+      updateData.changeSummary = body.changeDescription;
     }
     if (body.status !== undefined) {
       // Convert status to uppercase for enum
@@ -127,7 +128,8 @@ export async function PUT(
         createdBy: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         }
@@ -140,13 +142,12 @@ export async function PUT(
       documentId: updatedVersion.documentId,
       version: updatedVersion.versionNumber.toString(),
       createdAt: updatedVersion.createdAt.toISOString(),
-      updatedAt: updatedVersion.updatedAt.toISOString(),
       author: {
         id: updatedVersion.createdBy.id,
-        name: updatedVersion.createdBy.name,
+        name: `${updatedVersion.createdBy.firstName || ''} ${updatedVersion.createdBy.lastName || ''}`.trim(),
         email: updatedVersion.createdBy.email
       },
-      changeDescription: updatedVersion.changeDescription || "",
+      changeDescription: updatedVersion.changeSummary || "",
       status: updatedVersion.status.toLowerCase()
     };
     

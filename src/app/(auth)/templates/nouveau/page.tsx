@@ -49,7 +49,7 @@ const templateFormSchema = z.object({
   content: z.string().min(10, {
     message: 'Le contenu du modèle doit comporter au moins 10 caractères',
   }),
-  format: z.enum(['markdown', 'html', 'plain']).default('markdown'),
+  format: z.enum(['markdown', 'html', 'plain']),
   variables: z.array(z.any()).optional(),
 });
 

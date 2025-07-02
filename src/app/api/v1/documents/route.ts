@@ -38,7 +38,7 @@ function haveDocumentsBeenDeleted() {
 }
 
 // No mock data by default - system will return empty state when database is unavailable
-export const mockDocuments: any[] = [];
+const mockDocuments: any[] = [];
 
 // Try to initialize Elasticsearch index on server start
 async function initializeElasticsearch() {
@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
             name: `${newDocument.createdBy.firstName || ''} ${newDocument.createdBy.lastName || ''}`.trim() || newDocument.createdBy.email,
             email: newDocument.createdBy.email
           },
-          content: newDocument.content,
+          content: "", // Content is stored in DocumentVersion
           format: newDocument.primaryFormat,
           message: "Document created successfully"
         },

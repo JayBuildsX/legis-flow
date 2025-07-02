@@ -128,7 +128,7 @@ export default function DocumentVersionHistory({
       </CardHeader>
       <CardContent>
         <Accordion type="multiple" className="w-full">
-          {versions.map((version) => (
+          {versions.map((version, index) => (
             <AccordionItem key={version.id} value={version.id}>
               <AccordionTrigger className="group">
                 <div className="flex items-center space-x-2">
@@ -140,8 +140,8 @@ export default function DocumentVersionHistory({
                     onClick={(e) => e.stopPropagation()}
                   />
                   <span className="font-medium">Version {version.version}</span>
-                  <Badge variant={version.status === 'current' ? "default" : "outline"}>
-                    {version.status === 'current' ? 'Actuelle' : 'Archive'}
+                  <Badge variant={index === 0 ? "default" : "outline"}>
+                    {index === 0 ? 'Actuelle' : 'Archive'}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
                     {formatDate(version.createdAt)}
@@ -151,17 +151,13 @@ export default function DocumentVersionHistory({
               <AccordionContent>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="text-sm text-muted-foreground">Par: {version.createdBy.name}</span>
+                    <span className="text-sm text-muted-foreground">Par: {version.author.name}</span>
                   </div>
                   
-                  {version.changes && version.changes.length > 0 && (
+                  {version.changeDescription && (
                     <div className="mt-2">
-                      <span className="text-sm font-medium">Modifications:</span>
-                      <ul className="ml-5 list-disc text-sm">
-                        {version.changes.map((change, index) => (
-                          <li key={index}>{change}</li>
-                        ))}
-                      </ul>
+                      <span className="text-sm font-medium">Description:</span>
+                      <p className="text-sm ml-2">{version.changeDescription}</p>
                     </div>
                   )}
                   

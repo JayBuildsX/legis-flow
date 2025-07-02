@@ -55,12 +55,7 @@ export async function GET(
                   select: {
                     documents: true
                   }
-                }
-              }
-            },
-            // Get documents using this workflow via document types
-            documentTypes: {
-              include: {
+                },
                 documents: {
                   select: {
                     id: true,

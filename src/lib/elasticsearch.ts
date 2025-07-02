@@ -27,10 +27,10 @@ const checkElasticsearchAvailability = async () => {
   if (!client) return false;
   
   try {
-    const { body } = await client.ping();
-    return true;
+    const result = await client.ping();
+    return result === true;
   } catch (error) {
-    console.warn('Elasticsearch not available:', error.message);
+    console.warn('Elasticsearch not available:', error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 };
@@ -314,7 +314,7 @@ export class ElasticsearchService {
       });
       
       console.log('Elasticsearch search response:', {
-        totalHits: result.hits.total.value,
+        totalHits: typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value || 0,
         took: result.took,
         hitCount: result.hits.hits.length,
         maxScore: result.hits.max_score,
@@ -329,17 +329,17 @@ export class ElasticsearchService {
       
       // Format results
       const hits = result.hits.hits.map(hit => ({
-        ...hit._source,
+        ...(hit._source || {}),
         score: hit._score,
         highlights: hit.highlight || {}
       }));
       
       return {
         items: hits,
-        total: result.hits.total.value,
+        total: typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value || 0,
         page,
         limit: pageSize,
-        totalPages: Math.ceil(result.hits.total.value / pageSize)
+        totalPages: Math.ceil((typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value || 0) / pageSize)
       };
     } catch (error) {
       console.error('Failed to search documents:', error);
@@ -375,11 +375,14 @@ export class ElasticsearchService {
       }
     });
     
-    return result.hits.hits.map(hit => ({
-      id: hit._source.id,
-      title: hit._source.title,
-      reference: hit._source.reference
-    }));
+    return result.hits.hits.map(hit => {
+      const source = hit._source as any;
+      return {
+        id: source?.id || '',
+        title: source?.title || '',
+        reference: source?.reference || ''
+      };
+    });
   }
 
   /**

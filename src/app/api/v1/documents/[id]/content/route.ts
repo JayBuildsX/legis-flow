@@ -35,7 +35,7 @@ Non-compliance with the provisions of this legislation shall result in fines and
 };
 
 // Initialize Prisma client only when needed
-let prisma = null;
+let prisma: any = null;
 
 function getPrismaClient() {
   if (!prisma) {

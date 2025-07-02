@@ -28,20 +28,32 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import ReactMarkdown from 'react-markdown';
 
-export default function TemplateDetailPage({ params }: { params: { id: string } }) {
+export default function TemplateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [template, setTemplate] = useState<DocumentTemplate | null>(null);
   const [documentTypeName, setDocumentTypeName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+
+  // Resolve async params
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params;
+      setResolvedParams(resolved);
+    };
+    resolveParams();
+  }, [params]);
 
   useEffect(() => {
+    if (!resolvedParams) return;
+
     const fetchTemplate = async () => {
       try {
         setLoading(true);
         // Fetch template details
-        const response = await apiClient.getDocumentTemplate(params.id);
+        const response = await apiClient.getDocumentTemplate(resolvedParams.id);
         
         if (response.status === 200 && response.data) {
           setTemplate(response.data);
@@ -81,13 +93,13 @@ export default function TemplateDetailPage({ params }: { params: { id: string } 
     };
     
     fetchTemplate();
-  }, [params.id]);
+  }, [resolvedParams]);
 
   const handleDelete = async () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce modèle ?')) {
       try {
         setDeleting(true);
-        const response = await apiClient.deleteDocumentTemplate(params.id);
+        const response = await apiClient.deleteDocumentTemplate(resolvedParams!.id);
         
         if (response.status === 200) {
           // Redirect back to templates list
@@ -160,7 +172,7 @@ export default function TemplateDetailPage({ params }: { params: { id: string } 
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => router.push(`/templates/${params.id}/edit`)}
+            onClick={() => router.push(`/templates/${resolvedParams?.id || ''}/edit`)}
           >
             <Pencil className="h-4 w-4 mr-2" />
             Modifier

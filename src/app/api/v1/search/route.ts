@@ -32,13 +32,9 @@ export async function GET(request: NextRequest) {
       // Try Elasticsearch first
       console.log('Attempting Elasticsearch search...');
       const elasticResults = await ElasticsearchService.searchDocuments(query, {
-        page,
-        limit,
-        filters: {
-          ...(type && { type }),
-          ...(status && { status })
-        }
-      });
+        ...(type && { type: [type] }),
+        ...(status && { status: [status] })
+      }, page, limit);
 
       if (elasticResults && elasticResults.items && elasticResults.items.length > 0) {
         console.log(`Found ${elasticResults.items.length} results from Elasticsearch`);

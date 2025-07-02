@@ -46,7 +46,7 @@ export async function GET(
           name: `${version.createdBy.firstName || ''} ${version.createdBy.lastName || ''}`.trim() || version.createdBy.email,
           email: version.createdBy.email
         },
-        changeDescription: version.changeDescription || 'No description provided',
+        changeDescription: version.changeSummary || 'No description provided',
         status: version.status || 'draft'
       }));
 
@@ -98,8 +98,9 @@ export async function POST(
         data: {
           documentId,
           versionNumber: nextVersionNumber,
-          changeDescription: body.changeDescription || 'Document updated',
+          changeSummary: body.changeDescription || 'Document updated',
           status: body.status?.toLowerCase() || 'draft',
+          contentFormat: 'markdown', // Default format
           createdById: 'admin-user-id' // Should come from JWT token
         },
         include: {
@@ -124,7 +125,7 @@ export async function POST(
           name: `${newVersion.createdBy.firstName || ''} ${newVersion.createdBy.lastName || ''}`.trim() || newVersion.createdBy.email,
           email: newVersion.createdBy.email
         },
-        changeDescription: newVersion.changeDescription,
+        changeDescription: newVersion.changeSummary,
         status: newVersion.status,
         isMockData: false
       };

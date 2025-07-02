@@ -5,14 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { LucideFile, LucidePlus, LucideLoader2, LucideUpload } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
-import { apiClient, DocumentMeta, SearchFilters } from '@/lib/api';
+import { apiClient, DocumentMeta } from '@/lib/api';
 import { formatDate, validateDocuments } from '@/lib/utils';
-import DocumentSearchFilters from '@/components/molecules/DocumentSearchFilters';
+import DocumentSearchFilters, { SearchFilters } from '@/components/molecules/DocumentSearchFilters';
 import SearchResultHighlight from '@/components/molecules/SearchResultHighlight';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DeleteAllDocumentsButton from '@/components/molecules/DeleteAllDocumentsButton';
 
-interface ExtendedDocumentMeta extends DocumentMeta {
+interface ExtendedDocumentMeta extends Omit<DocumentMeta, 'status'> {
+  status: string; // Allow any string for status
   metadata?: {
     urgency?: 'normal' | 'faible' | 'elevee';
     [key: string]: any;
@@ -187,7 +188,17 @@ export default function Documents() {
       setLoading(true);
       console.log('Fetching documents with filters:', filters);
       
-      const response = await apiClient.getDocuments(currentPage, pageSize, filters);
+      // Convert component filters to API filters
+      const apiFilters = {
+        searchTerm: filters.searchTerm || undefined,
+        status: filters.status,
+        type: filters.type,
+        tags: filters.tags,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+      };
+      
+      const response = await apiClient.getDocuments(currentPage, pageSize, apiFilters);
       setResponse(response.data); // Store the full response
       
       console.log('Documents API response:', {

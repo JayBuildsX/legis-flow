@@ -55,7 +55,7 @@ const templateFormSchema = z.object({
 
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
-export default function EditTemplatePage({ params }: { params: { id: string } }) {
+export default function EditTemplatePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
@@ -64,6 +64,7 @@ export default function EditTemplatePage({ params }: { params: { id: string } })
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('content');
   const [templateVariables, setTemplateVariables] = useState<any[]>([]);
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
 
   // Initialize form with default values (will be updated when template is loaded)
   const form = useForm<TemplateFormValues>({
@@ -79,8 +80,19 @@ export default function EditTemplatePage({ params }: { params: { id: string } })
     mode: 'onChange',
   });
 
+  // Resolve async params
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params;
+      setResolvedParams(resolved);
+    };
+    resolveParams();
+  }, [params]);
+
   // Fetch document types and template data on component mount
   useEffect(() => {
+    if (!resolvedParams) return;
+
     const fetchData = async () => {
       try {
         // Fetch document types
@@ -105,7 +117,7 @@ export default function EditTemplatePage({ params }: { params: { id: string } })
         
         // Fetch template details
         setIsLoadingTemplate(true);
-        const templateResponse = await apiClient.getDocumentTemplate(params.id);
+        const templateResponse = await apiClient.getDocumentTemplate(resolvedParams.id);
         
         if (templateResponse.status === 200 && templateResponse.data) {
           const template = templateResponse.data;
@@ -139,7 +151,7 @@ export default function EditTemplatePage({ params }: { params: { id: string } })
     };
 
     fetchData();
-  }, [params.id, form]);
+  }, [resolvedParams, form]);
 
   // Handle form submission
   async function onSubmit(data: TemplateFormValues) {
@@ -158,11 +170,11 @@ export default function EditTemplatePage({ params }: { params: { id: string } })
         },
       };
       
-      const response = await apiClient.updateDocumentTemplate(params.id, templateData);
+      const response = await apiClient.updateDocumentTemplate(resolvedParams!.id, templateData);
 
       if (response.status === 200 && response.data) {
         // Redirect to the template detail page on success
-        router.push(`/templates/${params.id}`);
+        router.push(`/templates/${resolvedParams!.id}`);
       } else {
         throw new Error(response.message || 'Failed to update template');
       }
@@ -194,7 +206,7 @@ export default function EditTemplatePage({ params }: { params: { id: string } })
     <div className="container mx-auto p-6 max-w-5xl">
       <Button 
         variant="ghost" 
-        onClick={() => router.push(`/templates/${params.id}`)}
+        onClick={() => router.push(`/templates/${resolvedParams?.id || ''}`)}
         className="mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />

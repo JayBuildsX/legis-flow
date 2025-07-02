@@ -99,9 +99,9 @@ export class SignatureService {
           signatureType,
           signatureValue,
           certificateId: certificate.id,
-          signaturePosition: position ? JSON.stringify(position) : null,
-          reason: reason || null,
-          ipAddress: null, // Would be passed from request in real implementation
+          signaturePosition: position ? JSON.stringify(position) : undefined,
+          reason: reason || undefined,
+          ipAddress: undefined, // Would be passed from request in real implementation
           metadata: {
             userAgent: 'LEGIS-FLOW Digital Signature',
             timestamp: new Date().toISOString(),

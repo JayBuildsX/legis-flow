@@ -2,6 +2,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { LucideChevronRight, LucidePlus, LucideSearch, LucideWorkflow } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 interface WorkflowItemProps {
   id: string;
   name: string;

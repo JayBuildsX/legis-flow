@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarInitials } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DocumentAnalyticsService,
   AnalyticsReport,
@@ -51,7 +51,7 @@ import {
   Calendar,
   Download,
   Filter,
-  Refresh,
+  RefreshCw,
   BarChart3,
   PieChart as PieChartIcon,
   LineChart as LineChartIcon,
@@ -255,7 +255,7 @@ export default function DocumentAnalyticsDashboard({
                 Last updated: {lastRefresh.toLocaleTimeString()}
               </span>
               <Button size="sm" variant="outline" onClick={() => loadAnalytics()}>
-                <Refresh className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -546,7 +546,7 @@ export default function DocumentAnalyticsDashboard({
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"

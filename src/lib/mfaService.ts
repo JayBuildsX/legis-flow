@@ -25,7 +25,7 @@ export class MFAService {
    */
   static generateMFASecret(userEmail: string, serviceName: string = 'LEGIS-FLOW'): MFASetupData {
     // Generate a random secret (base32)
-    const secret = crypto.randomBytes(20).toString('base32');
+    const secret = crypto.randomBytes(20).toString('hex');
     
     // Create QR code URL for Google Authenticator compatibility
     const qrCodeUrl = this.generateQRCodeUrl(userEmail, serviceName, secret);
@@ -182,8 +182,7 @@ export class MFAService {
         where: { id: userId },
         data: {
           mfaSecret: null,
-          mfaEnabled: false,
-          mfaBackupCodes: null
+          mfaEnabled: false
         }
       });
       

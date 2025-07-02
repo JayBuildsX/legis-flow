@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
         createdById: user.id,
         lastModifiedById: user.id,
         ownerOrganizationId: organization.id,
-        status: DocumentStatus.IN_PROGRESS,
+        status: DocumentStatus.REVIEW,
         confidentiality: Confidentiality.PUBLIC,
         keywords: ["test", "demo", "example"],
         metadata: {},

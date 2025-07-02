@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, FileText, Edit, Copy, Settings, ArrowRight, Check, MessageSquare, Clipboard, Clock, User, Users, FileCheck, LockKeyhole } from 'lucide-react';
+import { CalendarDays, FileText, Edit, Copy, Settings, ArrowRight, Check, MessageSquare, Clipboard, Clock, User, Users, FileCheck, LockKeyhole, CheckCircle, Calendar } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useParams } from 'next/navigation';

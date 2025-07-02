@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           index: 'documents'
         });
         
-        documentCount = indexStats._all.total.docs.count;
+        documentCount = indexStats._all?.total?.docs?.count || 0;
       }
       
       return NextResponse.json({

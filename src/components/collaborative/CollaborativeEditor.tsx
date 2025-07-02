@@ -112,7 +112,7 @@ export default function CollaborativeEditor({
       const success = await collaborativeService.initializeSession(
         documentId,
         user.id,
-        user.name || user.username || 'Unknown User'
+        user.name || user.email || 'Unknown User'
       );
 
       if (success) {
@@ -326,9 +326,9 @@ export default function CollaborativeEditor({
                 <div 
                   className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white"
                   style={{ backgroundColor: '#3B82F6' }}
-                  title={user?.name || 'You'}
+                  title={user?.name || user?.email || 'You'}
                 >
-                  {(user?.name || user?.username || 'U')[0].toUpperCase()}
+                  {(user?.name || user?.email || 'U')[0].toUpperCase()}
                 </div>
                 
                 {/* Other users */}

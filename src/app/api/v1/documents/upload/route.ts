@@ -199,10 +199,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           filePath: fileMetadata.storagePath,
           fileSize: fileMetadata.size,
           mimeType: fileMetadata.mimeType,
-          isOriginal: true,
+
           isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
           metadata: {
             originalFilename: originalFilename
           },
@@ -224,12 +222,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           id: document.id,
           title: document.title,
           reference: document.referenceNumber,
-          description: document.description,
+
           status: document.status,
           content: extractedText,
           keywords: document.keywords,
-          createdAt: document.createdAt.toISOString(),
-          updatedAt: document.updatedAt.toISOString(),
+          createdAt: document.creationDate.toISOString(),
+          updatedAt: document.lastModifiedDate.toISOString(),
         });
 
         // Update lastSearchIndexed timestamp
@@ -257,7 +255,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         referenceNumber: document.referenceNumber,
         status: document.status,
         versionNumber: documentVersion.versionNumber,
-        createdAt: document.createdAt,
+        createdAt: document.creationDate,
       }
     }, { status: 201 });
   } catch (error) {

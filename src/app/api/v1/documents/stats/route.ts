@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     // Get document counts by status
     const totalDocuments = await db.document.count();
     const inProgressDocuments = await db.document.count({
-      where: { status: DocumentStatus.IN_PROGRESS }
+      where: { status: DocumentStatus.REVIEW }
     });
     const completedDocuments = await db.document.count({
       where: { status: DocumentStatus.APPROVED }

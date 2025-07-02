@@ -4,8 +4,15 @@ import { NextRequest } from 'next/server';
 import { FileStorageService } from '@/lib/fileStorage';
 import fs from 'fs/promises';
 
-// Initialize Prisma client
-const prisma = new PrismaClient();
+// Initialize Prisma client only when needed
+let prisma: PrismaClient | null = null;
+
+function getPrisma() {
+  if (!prisma) {
+    prisma = new PrismaClient();
+  }
+  return prisma;
+}
 
 export async function GET(
   request: NextRequest,
@@ -27,7 +34,7 @@ export async function GET(
     }
     
     // Find the document version in the database
-    const version = await prisma.documentVersion.findFirst({
+    const version = await getPrisma().documentVersion.findFirst({
       where: { 
         documentId: id,
         versionNumber: versionNumber
@@ -122,7 +129,7 @@ export async function PUT(
     }
     
     // Find the version to update
-    const version = await prisma.documentVersion.findFirst({
+    const version = await getPrisma().documentVersion.findFirst({
       where: { 
         documentId: id,
         versionNumber: versionNumber
