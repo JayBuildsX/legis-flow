@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { User, getUsers, getUserByEmail, addUser } from '@/lib/users';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@/generated/prisma';
+
+const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
-  console.log('Auth POST called with action:', request.headers.get('content-type'));
-  
   try {
     const body = await request.json();
     const { action } = body;
-    console.log('Auth action:', action);
 
     if (action === 'login') {
-      return handleLogin(body);
+      return await handleLogin(body);
     } else if (action === 'register') {
-      return handleRegister(body);
+      return await handleRegister(body);
     } else if (action === 'logout') {
       return handleLogout();
     } else {
@@ -30,55 +31,86 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function handleLogin(body: { email: string; password: string }) {
+async function handleLogin(body: { email: string; password: string }) {
   const { email, password } = body;
-  console.log('Login attempt for:', email);
 
-  // Find user by email
-  const user = getUserByEmail(email);
-  
-  if (!user) {
-    console.log('User not found:', email);
-  }
-
-  // Check if user exists and password matches
-  if (!user || user.password !== password) {
-    console.log('Invalid credentials for:', email);
+  if (!email || !password) {
     return NextResponse.json(
-      { message: 'Invalid email or password' },
-      { status: 401 }
+      { message: 'Email and password are required' },
+      { status: 400 }
     );
   }
 
-  console.log('User authenticated:', user.name, 'with ID:', user.id);
-  
-  // Create more secure token with expiration
-  const timestamp = Date.now();
-  const expiration = timestamp + (3600 * 1000); // 1 hour from now
-  const token = `mock-jwt-token-for-user-${user.id}-exp-${expiration}-${timestamp}`;
-  console.log('Generated token:', token);
-  
-  // Return user info and token (exclude password)
-  const { password: _, ...userWithoutPassword } = user;
-  
-  console.log('Returning user data:', userWithoutPassword);
-  console.log('With permissions:', user.permissions || []);
-  
-  return NextResponse.json({
-    user: userWithoutPassword,
-    access_token: token,
-    token_type: 'Bearer',
-    expires_in: 3600
-  });
+  try {
+    // Find user in database
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { message: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
+    // Verify password against passwordHash field
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { message: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
+    // Get user's primary role
+    const primaryRole = user.userRoles.length > 0 ? user.userRoles[0].role.name : 'user';
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email,
+        role: primaryRole
+      },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '24h' }
+    );
+
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        email: user.email,
+        role: primaryRole,
+        organization: 'Demo Organization'
+      },
+      token,
+      token_type: 'Bearer',
+      expires_in: 86400
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { message: 'Database error' },
+      { status: 500 }
+    );
+  }
 }
 
-function handleRegister(body: { name: string; email: string; password: string; organization?: string }) {
-  const { name, email, password, organization } = body;
-  console.log('Registration attempt for:', email);
+async function handleRegister(body: { name: string; email: string; password: string; organization?: string }) {
+  const { name, email, password } = body;
 
-  // Check if required fields are provided
   if (!name || !email || !password) {
-    console.log('Missing required fields for registration');
     return NextResponse.json(
       { message: 'Name, email and password are required' },
       { status: 400 }
@@ -86,49 +118,84 @@ function handleRegister(body: { name: string; email: string; password: string; o
   }
 
   try {
-    // Create and add new user
-    const newUser = addUser({
-      id: '',  // Will be auto-generated
-      name,
-      email,
-      password,
-      role: 'viewer', // Default role
-      organization: organization || 'Unknown',
-      permissions: ['documents.view'], // Default permissions
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
     });
-    
-    console.log('User registered successfully:', newUser.name, 'with ID:', newUser.id);
-    console.log('User permissions:', newUser.permissions);
-    
-    // Create more secure token with expiration
-    const timestamp = Date.now();
-    const expiration = timestamp + (3600 * 1000); // 1 hour from now
-    const token = `mock-jwt-token-for-user-${newUser.id}-exp-${expiration}-${timestamp}`;
-    console.log('Generated token for new user:', token);
 
-    // Return user info (exclude password)
-    const { password: _, ...userWithoutPassword } = newUser;
-    
-    console.log('Returning new user data:', userWithoutPassword);
-    
-    return NextResponse.json({
-      message: 'User registered successfully',
-      user: userWithoutPassword,
-      access_token: token,
-      token_type: 'Bearer',
-      expires_in: 3600
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Registration error:', error);
-    
-    // Check if it's the "user already exists" error
-    if (error instanceof Error && error.message.includes('already exists')) {
+    if (existingUser) {
       return NextResponse.json(
-        { message: error.message },
+        { message: 'User already exists' },
         { status: 409 }
       );
     }
-    
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Split name into firstName and lastName
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Create username from email
+    const username = email.split('@')[0];
+
+    // Create new user
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        status: 'ACTIVE'
+      }
+    });
+
+    // Get default role (if exists)
+    const defaultRole = await prisma.role.findFirst({
+      where: { name: 'user' }
+    });
+
+    // Assign default role if it exists
+    if (defaultRole) {
+      await prisma.userRole.create({
+        data: {
+          userId: newUser.id,
+          roleId: defaultRole.id,
+          assignedBy: newUser.id
+        }
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: newUser.id, 
+        email: newUser.email,
+        role: defaultRole?.name || 'user'
+      },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '24h' }
+    );
+
+    return NextResponse.json({
+      message: 'User registered successfully',
+      user: {
+        id: newUser.id,
+        name: `${newUser.firstName} ${newUser.lastName}`.trim(),
+        email: newUser.email,
+        role: defaultRole?.name || 'user',
+        organization: null
+      },
+      token,
+      token_type: 'Bearer',
+      expires_in: 86400
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Registration error:', error);
     return NextResponse.json(
       { message: 'Registration failed' },
       { status: 500 }
@@ -137,9 +204,6 @@ function handleRegister(body: { name: string; email: string; password: string; o
 }
 
 function handleLogout() {
-  // In a real app, this would invalidate the token
-  console.log('User logged out');
-  
   return NextResponse.json(
     { message: 'Logged out successfully' },
     { status: 200 }

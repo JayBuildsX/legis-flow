@@ -3,42 +3,6 @@ import { ElasticsearchService } from '@/lib/elasticsearch';
 import { FileStorageService } from '@/lib/fileStorage';
 import { PrismaClient } from '@/generated/prisma';
 
-// Mock data for a document when database is unavailable
-const mockDocument = {
-  id: "doc-001",
-  title: "Draft Legislation on Environmental Protection",
-  reference: "ENV-2023-001",
-  type: "Legislation Draft",
-  status: "DRAFT",
-  createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-  updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  author: {
-    id: "user-001",
-    name: "Jean Dupont",
-    email: "jean.dupont@example.com"
-  },
-  lastModifiedBy: {
-    id: "user-001",
-    name: "Jean Dupont",
-    email: "jean.dupont@example.com"
-  },
-  organization: {
-    id: "org-001",
-    name: "Ministère de l'Environnement"
-  },
-  category: "Legislation Draft",
-  tags: ["environment", "legislation", "climate"],
-  metadata: {},
-  description: "Draft legislation focusing on enhancing environmental protection measures",
-  confidentiality: "PUBLIC",
-  currentVersion: 2,
-  primaryFormat: "docx",
-  fileCount: 2,
-  totalSize: 1024000,
-  availableFormats: ["docx", "pdf"],
-  isMockData: true
-};
-
 // Initialize Prisma client only when needed
 let prisma: PrismaClient | null = null;
 
@@ -63,57 +27,109 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Comment out authentication check for easier testing
-    /*
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-    */
-
-    // Correctly extract params.id for Next.js 15
     const params = await context.params;
     const documentId = params.id;
-    
-    // Get database client
+
+    if (!documentId) {
+      return NextResponse.json(
+        { message: 'Document ID is required' },
+        { status: 400 }
+      );
+    }
+
     const db = getPrismaClient();
     if (!db) {
-      console.log('Database not available, returning mock document for ID:', documentId);
-      return NextResponse.json({
-        ...mockDocument,
-        id: documentId,
-        isMockData: true
-      });
+      return NextResponse.json(
+        { message: 'Database unavailable. Please try again later.' },
+        { status: 503 }
+      );
     }
-    
+
     try {
-      // Attempt to find document in database
-      // This is a placeholder for actual database implementation
-      // In a real implementation, you would query the database
-      
-      // For now, return mock data with the requested ID
-      console.log(`Document ID ${documentId} not found in database, returning mock data`);
-      return NextResponse.json({
-        ...mockDocument,
-        id: documentId,
-        isMockData: true
+      const document = await db.document.findUnique({
+        where: { id: documentId },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          lastModifiedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          documentType: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
       });
+
+      if (!document) {
+        return NextResponse.json(
+          { message: 'Document not found' },
+          { status: 404 }
+        );
+      }
+
+      const formattedDocument = {
+        id: document.id,
+        title: document.title,
+        reference: document.referenceNumber,
+        type: document.documentType.name,
+        status: document.status,
+        createdAt: document.creationDate.toISOString(),
+        updatedAt: document.lastModifiedDate.toISOString(),
+        author: {
+          id: document.createdBy.id,
+          name: `${document.createdBy.firstName || ''} ${document.createdBy.lastName || ''}`.trim() || document.createdBy.email,
+          email: document.createdBy.email
+        },
+        lastModifiedBy: {
+          id: document.lastModifiedBy?.id || document.createdBy.id,
+          name: document.lastModifiedBy 
+            ? `${document.lastModifiedBy.firstName || ''} ${document.lastModifiedBy.lastName || ''}`.trim() || document.lastModifiedBy.email
+            : `${document.createdBy.firstName || ''} ${document.createdBy.lastName || ''}`.trim() || document.createdBy.email,
+          email: document.lastModifiedBy?.email || document.createdBy.email
+        },
+        description: document.description,
+        tags: document.keywords || [],
+        metadata: document.metadata || {},
+        confidentiality: document.confidentiality || 'PUBLIC',
+        currentVersion: document.version,
+        primaryFormat: document.primaryFormat || 'markdown',
+        fileCount: document.fileCount || 1,
+        totalSize: document.totalSize || 0,
+        availableFormats: ['markdown', 'pdf'],
+        isMockData: false
+      };
+
+      return NextResponse.json({
+        data: formattedDocument,
+        isMockData: false
+      });
+
     } catch (error) {
-      console.error('Error retrieving document from database:', error);
-      return NextResponse.json({
-        ...mockDocument,
-        id: documentId,
-        isMockData: true
-      });
+      console.error('Error fetching document from database:', error);
+      return NextResponse.json(
+        { message: 'Database error. Please try again later.' },
+        { status: 500 }
+      );
     }
+
   } catch (error) {
-    console.error('Error fetching document:', error);
+    console.error('Error in document detail route:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve document', details: error instanceof Error ? error.message : 'Unknown error' },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -127,46 +143,45 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Correctly extract params.id for Next.js 15
     const params = await context.params;
     const documentId = params.id;
     const body = await request.json();
-    
-    // Create an updated mock document
-    const updatedMockDocument = {
-      ...mockDocument,
-      id: documentId,
-      title: body.title || mockDocument.title,
-      description: body.description || mockDocument.description,
-      status: body.status || mockDocument.status,
-      reference: body.referenceNumber || mockDocument.reference,
-      tags: body.keywords || mockDocument.tags,
-      confidentiality: body.confidentiality || mockDocument.confidentiality,
-      metadata: body.metadata || mockDocument.metadata,
-      updatedAt: new Date().toISOString()
-    };
-    
-    console.log(`Database not available, returning mock updated document for ID: ${documentId}`);
-    return NextResponse.json({
-      ...updatedMockDocument,
-      isMockData: true,
-      message: "Document updated in mock mode"
+
+    const db = getPrismaClient();
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database unavailable' },
+        { status: 503 }
+      );
+    }
+
+    const updatedDocument = await db.document.update({
+      where: { id: documentId },
+      data: {
+        title: body.title,
+        description: body.description,
+        content: body.content,
+        status: body.status,
+        keywords: body.tags || [],
+        lastModifiedDate: new Date(),
+        lastModifiedById: 'admin-user-id' // Should come from JWT token
+      },
+      include: {
+        createdBy: true,
+        lastModifiedBy: true,
+        documentType: true
+      }
     });
-    
+
+    return NextResponse.json({
+      data: updatedDocument,
+      message: 'Document updated successfully'
+    });
+
   } catch (error) {
     console.error('Error updating document:', error);
     return NextResponse.json(
-      { error: 'Failed to update document', details: error instanceof Error ? error.message : 'Unknown error' },
+      { message: 'Failed to update document' },
       { status: 500 }
     );
   }
@@ -180,29 +195,29 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-    
-    // Correctly extract params.id for Next.js 15
     const params = await context.params;
     const documentId = params.id;
-    
-    console.log(`Database not available, simulating deletion of document ID: ${documentId}`);
-    return NextResponse.json({
-      message: 'Document deleted successfully (mock mode)',
-      isMockData: true
+
+    const db = getPrismaClient();
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database unavailable' },
+        { status: 503 }
+      );
+    }
+
+    await db.document.delete({
+      where: { id: documentId }
     });
+
+    return NextResponse.json({
+      message: 'Document deleted successfully'
+    });
+
   } catch (error) {
     console.error('Error deleting document:', error);
     return NextResponse.json(
-      { error: 'Failed to delete document', details: error instanceof Error ? error.message : 'Unknown error' },
+      { message: 'Failed to delete document' },
       { status: 500 }
     );
   }

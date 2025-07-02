@@ -262,28 +262,59 @@ export async function POST(request: NextRequest) {
     }
     
     try {
-      // Try to create the document in the database
-      // This is a placeholder for actual database implementation
-      // In a real implementation, you would store the document in the database
-      
-      // For now, return a mock response 
+      // Create the document in the database
+      const newDocument = await db.document.create({
+        data: {
+          title,
+          referenceNumber: body.referenceNumber || body.reference_number || `DOC-${Date.now().toString().slice(-6)}`,
+          status: 'DRAFT',
+          documentTypeId,
+          description: body.description || '',
+          keywords: body.tags || [],
+          primaryFormat: body.content_format || 'markdown',
+          language: 'en',
+          createdById: 'user-001', // This should come from the JWT token
+          lastModifiedById: 'user-001',
+          ownerOrganizationId: 'org-001',
+          creationDate: new Date(),
+          lastModifiedDate: new Date(),
+          fileCount: 1
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          documentType: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      });
+
       return NextResponse.json(
         { 
-          id: `doc-${Date.now()}`,
-          title: title,
-          reference: body.referenceNumber || body.reference_number || `DOC-${Date.now().toString().slice(-6)}`,
-          status: "DRAFT",
-          type: "Document",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          id: newDocument.id,
+          title: newDocument.title,
+          reference: newDocument.referenceNumber,
+          status: newDocument.status,
+          type: newDocument.documentType.name,
+          createdAt: newDocument.creationDate.toISOString(),
+          updatedAt: newDocument.lastModifiedDate.toISOString(),
           author: {
-            id: "user-001",
-            name: "Martin Dupont",
-            email: "martin.dupont@example.com"
+            id: newDocument.createdBy.id,
+            name: `${newDocument.createdBy.firstName || ''} ${newDocument.createdBy.lastName || ''}`.trim() || newDocument.createdBy.email,
+            email: newDocument.createdBy.email
           },
-          content: body.content || "",
-          format: body.content_format || "markdown",
-          message: "Created document successfully (note: database not implemented)"
+          content: newDocument.content,
+          format: newDocument.primaryFormat,
+          message: "Document created successfully"
         },
         { status: 201 }
       );

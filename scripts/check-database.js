@@ -9,7 +9,7 @@ async function main() {
     const users = await prisma.user.findMany();
     console.log(`Found ${users.length} users:`);
     users.forEach(user => {
-      console.log(`- ${user.id}: ${user.name} (${user.email})`);
+      console.log(`- ${user.id}: ${user.firstName} ${user.lastName} (${user.email})`);
     });
     
     // Check organizations

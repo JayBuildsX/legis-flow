@@ -52,7 +52,9 @@ async function main() {
     
     console.log(`Created/updated organization: ${organization.name}`);
 
-    // Clear existing document types (useful for re-running seeds)
+    // Clear existing data (useful for re-running seeds)
+    // Delete in proper order to respect foreign key constraints
+    await prisma.document.deleteMany({});
     await prisma.documentType.deleteMany({});
     
     // Create document types
@@ -147,6 +149,76 @@ async function main() {
     ]);
     
     console.log(`Created ${documents.length} sample documents`);
+
+    // Create some template documents
+    const templates = await Promise.all([
+      prisma.document.create({
+        data: {
+          title: 'Standard Legislation Template',
+          referenceNumber: 'TPL-2024-001',
+          documentTypeId: documentTypes[0].id,
+          status: DocumentStatus.DRAFT,
+          version: 1,
+          language: 'en',
+          createdById: user.id,
+          lastModifiedById: user.id,
+          ownerOrganizationId: organization.id,
+          confidentiality: Confidentiality.PUBLIC,
+          isTemplate: true,
+          keywords: ['template', 'legislation', 'standard'],
+          metadata: {
+            description: 'Standard template for legislative documents',
+            content: '# {{title}}\n\n## Article 1\n{{article_1_content}}\n\n## Article 2\n{{article_2_content}}\n\n---\n*Document created on {{date}}*',
+            variables: [
+              { name: 'title', label: 'Document Title', type: 'text', required: true },
+              { name: 'article_1_content', label: 'Article 1 Content', type: 'textarea', required: true },
+              { name: 'article_2_content', label: 'Article 2 Content', type: 'textarea', required: false }
+            ],
+            category: 'LEGISLATIVE',
+            tags: ['template', 'standard']
+          },
+          primaryFormat: 'markdown',
+          fileCount: 0,
+          totalSize: 0,
+          textExtracted: false
+        },
+      }),
+      prisma.document.create({
+        data: {
+          title: 'Policy Brief Template',
+          referenceNumber: 'TPL-2024-002',
+          documentTypeId: documentTypes[1].id,
+          status: DocumentStatus.DRAFT,
+          version: 1,
+          language: 'en',
+          createdById: user.id,
+          lastModifiedById: user.id,
+          ownerOrganizationId: organization.id,
+          confidentiality: Confidentiality.PUBLIC,
+          isTemplate: true,
+          keywords: ['template', 'policy', 'brief'],
+          metadata: {
+            description: 'Template for policy brief documents',
+            content: '# {{policy_title}}\n\n## Executive Summary\n{{executive_summary}}\n\n## Problem Statement\n{{problem_statement}}\n\n## Recommendations\n{{recommendations}}\n\n## Conclusion\n{{conclusion}}',
+            variables: [
+              { name: 'policy_title', label: 'Policy Title', type: 'text', required: true },
+              { name: 'executive_summary', label: 'Executive Summary', type: 'textarea', required: true },
+              { name: 'problem_statement', label: 'Problem Statement', type: 'textarea', required: true },
+              { name: 'recommendations', label: 'Recommendations', type: 'textarea', required: true },
+              { name: 'conclusion', label: 'Conclusion', type: 'textarea', required: false }
+            ],
+            category: 'POLICY',
+            tags: ['template', 'brief']
+          },
+          primaryFormat: 'markdown',
+          fileCount: 0,
+          totalSize: 0,
+          textExtracted: false
+        },
+      }),
+    ]);
+    
+    console.log(`Created ${templates.length} template documents`);
   } catch (error) {
     console.error("Error in seed script:", error);
     throw error;

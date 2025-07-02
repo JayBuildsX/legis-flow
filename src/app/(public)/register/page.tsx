@@ -1,220 +1,302 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LucideEye, LucideEyeOff, LucideLoader2, LucideShield, LucideUser, LucideMail, LucideBuilding } from 'lucide-react';
 import Link from 'next/link';
-import { LucideArrowRight, LucideLoader2, LucideUser, LucideBuilding, LucideMail, LucideLock } from 'lucide-react';
+
+interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  organization: string;
+}
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [organization, setOrganization] = useState('');
+  const [formData, setFormData] = useState<RegisterFormData>({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    organization: ''
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register } = useAuth();
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validateForm = (): string | null => {
+    if (!formData.name.trim()) return 'Le nom est requis';
+    if (!formData.email.trim()) return 'L\'email est requis';
+    if (!formData.password) return 'Le mot de passe est requis';
+    if (formData.password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
+    if (formData.password !== formData.confirmPassword) return 'Les mots de passe ne correspondent pas';
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) return 'Format d\'email invalide';
+    
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
-    // Validation
-    if (!name || !email || !password || !confirmPassword) {
-      setError('Veuillez remplir tous les champs obligatoires');
+    setSuccess(null);
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
-    
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
-    }
-    
+
+    setIsLoading(true);
+
     try {
-      setIsSubmitting(true);
-      await register({ name, email, password, organization });
-      // Redirect is handled in the AuthContext
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de l\'inscription');
+      const response = await fetch('/api/v1/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'register',
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          organization: formData.organization
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Inscription réussie ! Vous pouvez maintenant vous connecter.');
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          organization: ''
+        });
+      } else {
+        setError(data.message || 'Une erreur est survenue lors de l\'inscription');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left side - Branding */}
-      <div className="hidden md:flex md:w-1/2 bg-primary-600 text-white p-10 flex-col">
-        <div className="flex-1 flex flex-col justify-center items-center">
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold mb-3">LEGIS-FLOW</h1>
-            <p className="text-xl opacity-80">
-              La solution intégrée de gestion des textes normatifs
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary/10">
+            <LucideShield className="h-6 w-6 text-primary" />
           </div>
-          <div className="w-3/4 aspect-square relative">
-            {/* You can add an illustration here */}
-            <div className="bg-primary-300 bg-opacity-20 rounded-full absolute inset-0"></div>
-          </div>
-        </div>
-        <div className="mt-auto text-sm opacity-70">
-          <p>© 2024 LEGIS-FLOW - Tous droits réservés</p>
-        </div>
-      </div>
-
-      {/* Right side - Registration form */}
-      <div className="flex-1 flex flex-col p-6 md:p-10 justify-center max-w-md mx-auto w-full">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Créer un compte</h2>
-          <p className="text-slate-500">
-            Rejoignez LEGIS-FLOW pour commencer à gérer vos documents normatifs
+          <h2 className="mt-6 text-3xl font-bold text-slate-900">
+            Créer un compte
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Ou{' '}
+            <Link
+              href="/login"
+              className="font-medium text-primary hover:text-primary/80"
+            >
+              connectez-vous à votre compte existant
+            </Link>
           </p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-md mb-6 text-sm border border-red-200">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-              Nom complet <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <LucideUser className="h-5 w-5 text-slate-400" />
-              </div>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Jean Dupont"
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-              Email <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <LucideMail className="h-5 w-5 text-slate-400" />
-              </div>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="votre@email.com"
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-              Mot de passe <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <LucideLock className="h-5 w-5 text-slate-400" />
-              </div>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Minimum 8 caractères"
-                disabled={isSubmitting}
-                required
-                minLength={8}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
-              Confirmer le mot de passe <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <LucideLock className="h-5 w-5 text-slate-400" />
-              </div>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Confirmer le mot de passe"
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="organization" className="block text-sm font-medium text-slate-700 mb-1">
-              Organisation
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <LucideBuilding className="h-5 w-5 text-slate-400" />
-              </div>
-              <input
-                id="organization"
-                type="text"
-                value={organization}
-                onChange={(e) => setOrganization(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Nom de votre organisation (optionnel)"
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <LucideLoader2 className="animate-spin mr-2 h-4 w-4" />
-                  Création du compte...
-                </>
-              ) : (
-                <>
-                  Créer un compte
-                  <LucideArrowRight className="ml-2 h-4 w-4" />
-                </>
+        <Card>
+          <CardHeader>
+            <CardTitle>Inscription</CardTitle>
+            <CardDescription>
+              Créez votre compte pour accéder à LEGIS-FLOW
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-            </button>
-          </div>
-        </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-slate-600">
-            Vous avez déjà un compte?{' '}
-            <Link href="/login" className="font-medium text-primary-600 hover:text-primary-500">
-              Se connecter
-            </Link>
+              {success && (
+                <Alert>
+                  <AlertDescription className="text-green-600">{success}</AlertDescription>
+                </Alert>
+              )}
+
+              <div>
+                <Label htmlFor="name">Nom complet</Label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <LucideUser className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    className="pl-10"
+                    placeholder="Admin User"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="email">Adresse email</Label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <LucideMail className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="pl-10"
+                    placeholder="admin@example.com"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="organization">Organisation (optionnel)</Label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <LucideBuilding className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <Input
+                    id="organization"
+                    name="organization"
+                    type="text"
+                    className="pl-10"
+                    placeholder="Votre organisation"
+                    value={formData.organization}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="password">Mot de passe</Label>
+                <div className="mt-1 relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    className="pr-10"
+                    placeholder="Minimum 8 caractères"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <button
+                      type="button"
+                      className="text-slate-400 hover:text-slate-600"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <LucideEyeOff className="h-5 w-5" />
+                      ) : (
+                        <LucideEye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                <div className="mt-1 relative">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    className="pr-10"
+                    placeholder="Confirmer votre mot de passe"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <button
+                      type="button"
+                      className="text-slate-400 hover:text-slate-600"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <LucideEyeOff className="h-5 w-5" />
+                      ) : (
+                        <LucideEye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <LucideLoader2 className="animate-spin mr-2 h-4 w-4" />
+                      Création en cours...
+                    </>
+                  ) : (
+                    'Créer mon compte'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="text-center">
+          <p className="text-xs text-slate-500">
+            En créant un compte, vous acceptez nos{' '}
+            <a href="#" className="text-primary hover:text-primary/80">
+              conditions d'utilisation
+            </a>{' '}
+            et notre{' '}
+            <a href="#" className="text-primary hover:text-primary/80">
+              politique de confidentialité
+            </a>
           </p>
         </div>
       </div>

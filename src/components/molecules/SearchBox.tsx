@@ -51,7 +51,7 @@ export default function SearchBox({
         setLoading(true);
         const response = await apiClient.suggestDocuments(query);
         if (response.status === 200) {
-          setSuggestions(response.data.suggestions);
+          setSuggestions(response.data.suggestions || []);
         }
       } catch (error) {
         console.error('Error fetching suggestions:', error);
@@ -183,7 +183,7 @@ export default function SearchBox({
               <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
               Recherche en cours...
             </div>
-          ) : suggestions.length > 0 ? (
+          ) : suggestions && suggestions.length > 0 ? (
             <ul>
               {suggestions.map((suggestion) => (
                 <li key={suggestion.id}>

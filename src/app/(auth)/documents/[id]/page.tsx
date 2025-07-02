@@ -57,9 +57,9 @@ export default function DocumentDetail() {
         
         // Set mock data based on the document
         setComments([
-          { id: 1, user: "Sophie Martin", date: "2024-03-11", content: "L'article 3 pourrait préciser la fréquence des réunions du comité de veille.", resolved: true },
-          { id: 2, user: "Jean Legrand", date: "2024-03-09", content: "Suggère d'ajouter une référence au Code de la santé publique dans l'article 1.", resolved: true },
-          { id: 3, user: "Martin Dupont", date: "2024-03-07", content: "Vérifier si les mesures de l'article 2 sont alignées avec les dernières recommandations sanitaires.", resolved: false }
+          { id: 1, user: "Admin User", date: "2024-03-11", content: "L'article 3 pourrait préciser la fréquence des réunions du comité de veille.", resolved: true },
+          { id: 2, user: "Admin User", date: "2024-03-09", content: "Suggère d'ajouter une référence au Code de la santé publique dans l'article 1.", resolved: true },
+          { id: 3, user: "Admin User", date: "2024-03-07", content: "Vérifier si les mesures de l'article 2 sont alignées avec les dernières recommandations sanitaires.", resolved: false }
         ]);
 
         // Fetch document content

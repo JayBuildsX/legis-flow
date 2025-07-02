@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { User, getUsers, getUserById } from '@/lib/users';
+import { User, getUsersSync as getUsers, getUserByIdSync as getUserById } from '@/lib/users';
 
 export async function GET(request: NextRequest) {
   console.log('ME endpoint called with:', request.headers.get('authorization'));

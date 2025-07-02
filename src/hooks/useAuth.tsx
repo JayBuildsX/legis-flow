@@ -3,113 +3,102 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 
 // Types
-export interface User {
+interface User {
   id: string;
   name: string;
   email: string;
   role: string;
+  organization?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  token: string | null;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for now - in a real app, this would come from the API
-
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check for stored token and user on mount
   useEffect(() => {
-    // Check if the user is already logged in
-    const checkAuth = async () => {
-      setLoading(true);
+    // Check for stored auth data on mount
+    const storedToken = localStorage.getItem('auth_token');
+    const storedUser = localStorage.getItem('auth_user');
+    
+    if (storedToken && storedUser) {
       try {
-        const token = localStorage.getItem('auth_token');
-        const userJson = localStorage.getItem('auth_user');
-        
-        if (token && userJson) {
-          // Token exists, validate it (in a real app you would verify with the server)
-          const userData = JSON.parse(userJson) as User;
-          setUser(userData);
-          setIsAuthenticated(true);
-        }
-      } catch (err) {
-        console.error('Auth check failed:', err);
-        setError('Session authentication failed');
-        // Clear potentially corrupted auth data
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-      } finally {
-        setLoading(false);
       }
-    };
-
-    checkAuth();
+    }
+    setIsLoading(false);
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string) => {
-    setLoading(true);
-    setError(null);
-    
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demo purposes - in a real app this would call an API endpoint
-      if (email === 'admin@example.com' && password === 'password') {
-        const mockUser: User = {
-          id: '1',
-          name: 'Administrator',
-          email: 'admin@example.com',
-          role: 'admin'
-        };
-        
-        // Store authentication data
-        localStorage.setItem('auth_token', 'mock-jwt-token');
-        localStorage.setItem('auth_user', JSON.stringify(mockUser));
-        
-        setUser(mockUser);
-        setIsAuthenticated(true);
+      const response = await fetch('/api/v1/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'login',
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        return true;
       } else {
-        throw new Error('Invalid credentials');
+        console.error('Login failed:', data.message);
+        return false;
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
-      setIsAuthenticated(false);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
   };
 
-  // Logout function
   const logout = () => {
+    setUser(null);
+    setToken(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
-    setUser(null);
-    setIsAuthenticated(false);
+    
+    // Optional: Call logout endpoint
+    fetch('/api/v1/auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'logout' }),
+    }).catch(error => console.error('Logout error:', error));
   };
 
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    isAuthenticated,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 // Hook for using auth context
