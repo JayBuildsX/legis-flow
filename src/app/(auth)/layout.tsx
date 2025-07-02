@@ -155,12 +155,15 @@ export default function AuthLayout({
                 label="Workflows" 
                 active={pathname.startsWith('/workflows')} 
               />
-              <SidebarItem 
-                href="/admin" 
-                icon={<LucideUsers size={18} />} 
-                label="Administration" 
-                active={pathname.startsWith('/admin')} 
-              />
+              {/* Only show Administration for users with admin permissions */}
+              {(user?.role === 'admin' || user?.permissions?.includes('admin.access')) && (
+                <SidebarItem 
+                  href="/admin" 
+                  icon={<LucideUsers size={18} />} 
+                  label="Administration" 
+                  active={pathname.startsWith('/admin')} 
+                />
+              )}
             </div>
           </nav>
           
@@ -231,7 +234,7 @@ export default function AuthLayout({
                   {pathname.startsWith('/documents') && 'Documents'}
                   {pathname.startsWith('/templates') && 'Modèles'}
                   {pathname.startsWith('/workflows') && 'Workflows'}
-                  {pathname.startsWith('/admin') && 'Administration'}
+                  {pathname.startsWith('/admin') && (user?.role === 'admin' || user?.permissions?.includes('admin.access')) && 'Administration'}
                 </h1>
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>

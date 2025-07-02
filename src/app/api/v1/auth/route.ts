@@ -42,13 +42,21 @@ async function handleLogin(body: { email: string; password: string }) {
   }
 
   try {
-    // Find user in database
+    // Find user in database with full role and permission data
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
         userRoles: {
           include: {
-            role: true
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -71,8 +79,18 @@ async function handleLogin(body: { email: string; password: string }) {
       );
     }
 
-    // Get user's primary role
+    // Get user's primary role and collect all permissions
     const primaryRole = user.userRoles.length > 0 ? user.userRoles[0].role.name : 'user';
+    const permissions: string[] = [];
+    
+    // Collect all permissions from all user roles
+    user.userRoles.forEach(userRole => {
+      userRole.role.rolePermissions.forEach(rolePermission => {
+        if (!permissions.includes(rolePermission.permission.code)) {
+          permissions.push(rolePermission.permission.code);
+        }
+      });
+    });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -91,9 +109,10 @@ async function handleLogin(body: { email: string; password: string }) {
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
         email: user.email,
         role: primaryRole,
-        organization: 'Demo Organization'
+        organization: 'Demo Organization',
+        permissions: permissions
       },
-      token,
+      access_token: token,
       token_type: 'Bearer',
       expires_in: 86400
     });
