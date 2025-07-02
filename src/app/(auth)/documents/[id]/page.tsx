@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LucideLoader2 } from 'lucide-react';
@@ -23,7 +23,16 @@ type CommentType = {
 export default function DocumentDetail() {
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  
+  // Handle the Promise-based params for Next.js 15 compatibility
+  const resolvedParams = React.useMemo(() => {
+    if (params && typeof params.id === 'string') {
+      return { id: params.id };
+    }
+    return { id: '' };
+  }, [params]);
+  
+  const id = resolvedParams.id;
   
   const [document, setDocument] = useState<Document | null>(null);
   const [content, setContent] = useState<DocumentContent | null>(null);

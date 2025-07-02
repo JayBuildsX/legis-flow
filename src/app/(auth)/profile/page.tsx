@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LucideLoader2, LucideUser, LucideBuilding, LucideMail, LucideLock } from 'lucide-react';
+import MFAManager from '@/components/auth/MFAManager';
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth();
@@ -305,6 +306,15 @@ export default function ProfilePage() {
             </div>
           </form>
         )}
+      </div>
+
+      {/* MFA Security Section */}
+      <div className="mt-8">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-800">Sécurité</h2>
+          <p className="text-slate-500 mt-1">Gérez la sécurité de votre compte</p>
+        </div>
+        <MFAManager />
       </div>
     </div>
   );

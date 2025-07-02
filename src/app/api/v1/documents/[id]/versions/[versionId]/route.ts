@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
+import { PrismaClient } from '@/generated/prisma';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -10,13 +9,12 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string, versionId: string } }
+  { params }: { params: Promise<{ id: string; versionId: string }> }
 ) {
   try {
-    // Properly await the params object itself
-    const params = await Promise.resolve(context.params);
-    const id = params.id;
-    const versionId = params.versionId;
+    const resolvedParams = await params;
+    const documentId = resolvedParams.id;
+    const versionId = resolvedParams.versionId;
     
     // Extract the version number from the versionId (removing 'v' prefix)
     const versionNumber = parseFloat(versionId.replace('v', ''));
@@ -30,7 +28,7 @@ export async function GET(
     // Find the document version in the database
     const version = await prisma.documentVersion.findFirst({
       where: { 
-        documentId: id,
+        documentId: documentId,
         versionNumber: versionNumber
       },
       include: {
@@ -46,7 +44,7 @@ export async function GET(
     
     if (!version) {
       return NextResponse.json(
-        { message: `Version ${versionId} for document ${id} not found` },
+        { message: `Version ${versionId} for document ${documentId} not found` },
         { status: 404 }
       );
     }
@@ -79,13 +77,12 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  context: { params: { id: string, versionId: string } }
+  { params }: { params: Promise<{ id: string, versionId: string }> }
 ) {
   try {
-    // Properly await the params object itself
-    const params = await Promise.resolve(context.params);
-    const id = params.id;
-    const versionId = params.versionId;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
+    const versionId = resolvedParams.versionId;
     const body = await request.json();
     
     // Extract the version number from the versionId (removing 'v' prefix)

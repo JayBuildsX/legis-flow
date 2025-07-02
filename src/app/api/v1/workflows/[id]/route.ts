@@ -25,10 +25,11 @@ function getPrismaClient() {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const workflowId = params.id;
+    const resolvedParams = await params;
+    const workflowId = resolvedParams.id;
     console.log(`Fetching workflow details for ID: ${workflowId}`);
     
     // Try to get workflow from database
@@ -167,7 +168,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication
@@ -180,7 +181,8 @@ export async function PUT(
       );
     }
     
-    const workflowId = params.id;
+    const resolvedParams = await params;
+    const workflowId = resolvedParams.id;
     const body = await request.json();
     
     // Try to update workflow in database

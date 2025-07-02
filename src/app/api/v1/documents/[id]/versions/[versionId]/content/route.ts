@@ -6,18 +6,14 @@ import fs from 'fs/promises';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
-const fileStorage = new FileStorageService();
-
-// Initialize storage
-fileStorage.initialize();
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string, versionId: string } }
+  context: { params: Promise<{ id: string, versionId: string }> }
 ) {
   try {
     // Properly await the params object itself
-    const params = await Promise.resolve(context.params);
+    const params = await context.params;
     const id = params.id;
     const versionId = params.versionId;
     
@@ -37,7 +33,7 @@ export async function GET(
         versionNumber: versionNumber
       },
       include: {
-        files: true
+        convertedFiles: true
       }
     });
     
@@ -57,13 +53,13 @@ export async function GET(
     }
     
     // If no content in database but files exist, try to read from primary file
-    if (version.files.length > 0) {
-      const primaryFile = version.files.find(file => file.isPrimary);
-      const fileToRead = primaryFile || version.files[0]; // Use primary or first file
+    if (version.convertedFiles && version.convertedFiles.length > 0) {
+      const primaryFile = version.convertedFiles.find((file: any) => file.isActive);
+      const fileToRead = primaryFile || version.convertedFiles[0]; // Use primary or first file
       
       try {
-        // Get file path
-        const filePath = fileStorage.getFullPath(fileToRead.path);
+        // Get file path using static method
+        const filePath = FileStorageService.getFullPath(fileToRead.filePath);
         
         // Read file content
         const content = await fs.readFile(filePath, 'utf-8');
@@ -71,7 +67,7 @@ export async function GET(
         return NextResponse.json({
           content,
           format: fileToRead.format,
-          fileName: fileToRead.filename,
+          fileName: fileToRead.filePath,
           fileId: fileToRead.id
         });
       } catch (error) {
@@ -99,11 +95,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string, versionId: string } }
+  context: { params: Promise<{ id: string, versionId: string }> }
 ) {
   try {
     // Properly await the params object itself
-    const params = await Promise.resolve(context.params);
+    const params = await context.params;
     const id = params.id;
     const versionId = params.versionId;
     const body = await request.json();

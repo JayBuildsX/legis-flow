@@ -12,9 +12,11 @@ const prisma = new PrismaClient();
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params;
+    
     // Check authentication
     const authHeader = request.headers.get('authorization');
     
@@ -25,7 +27,7 @@ export async function GET(
       );
     }
 
-    const documentId = params.id;
+    const documentId = resolvedParams.id;
     const url = new URL(request.url);
     const requestedFormat = (url.searchParams.get('format')?.toUpperCase() as FileFormat) || null;
     const versionNumber = parseInt(url.searchParams.get('version') || '0');

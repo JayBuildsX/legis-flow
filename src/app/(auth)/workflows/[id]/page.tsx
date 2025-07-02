@@ -1,4 +1,5 @@
 "use client";
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -21,9 +22,9 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface WorkflowProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // Fetch workflow data from API
@@ -357,7 +358,8 @@ function StepTypeIcon({ type }: { type: string }) {
 }
 
 export default function WorkflowDetail({ params }: WorkflowProps) {
-  const id = params.id;
+  const resolvedParams = React.use(params);
+  const id = resolvedParams.id;
   const [activeTab, setActiveTab] = useState('overview');
   const workflow = getWorkflow(id);
   
