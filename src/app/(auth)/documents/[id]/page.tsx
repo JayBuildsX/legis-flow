@@ -24,6 +24,18 @@ export default function DocumentDetail() {
   const params = useParams();
   const router = useRouter();
   
+  // Safe date formatting utility
+  const formatDate = (dateString: string | null | undefined, formatString: string = 'dd/MM/yyyy à HH:mm'): string => {
+    if (!dateString) return 'Non défini';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Date invalide';
+      return format(date, formatString);
+    } catch {
+      return 'Date invalide';
+    }
+  };
+  
   // Handle the Promise-based params for Next.js 15 compatibility
   const resolvedParams = React.useMemo(() => {
     if (params && typeof params.id === 'string') {
@@ -306,23 +318,19 @@ export default function DocumentDetail() {
                 <dl className="space-y-2">
                   <div className="grid grid-cols-3">
                     <dt className="text-gray-500">Créé par</dt>
-                    <dd className="col-span-2">{document.author.name}</dd>
+                    <dd className="col-span-2">{document.author?.name || 'Non défini'}</dd>
                   </div>
                   <div className="grid grid-cols-3">
                     <dt className="text-gray-500">Email</dt>
-                    <dd className="col-span-2">{document.author.email}</dd>
+                    <dd className="col-span-2">{document.author?.email || 'Non défini'}</dd>
                   </div>
                   <div className="grid grid-cols-3">
                     <dt className="text-gray-500">Créé le</dt>
-                    <dd className="col-span-2">
-                      {format(new Date(document.createdAt), 'dd/MM/yyyy à HH:mm')}
-                    </dd>
+                    <dd className="col-span-2">{formatDate(document.createdAt)}</dd>
                   </div>
                   <div className="grid grid-cols-3">
                     <dt className="text-gray-500">Dernière modification</dt>
-                    <dd className="col-span-2">
-                      {format(new Date(document.updatedAt), 'dd/MM/yyyy à HH:mm')}
-                    </dd>
+                    <dd className="col-span-2">{formatDate(document.updatedAt)}</dd>
                   </div>
                 </dl>
               </div>
@@ -363,8 +371,8 @@ export default function DocumentDetail() {
                   {versions.map(version => (
                     <TableRow key={version.id}>
                       <TableCell>{version.version}</TableCell>
-                      <TableCell>{format(new Date(version.createdAt), 'dd/MM/yyyy HH:mm')}</TableCell>
-                      <TableCell>{version.author.name}</TableCell>
+                      <TableCell>{formatDate(version.createdAt, 'dd/MM/yyyy HH:mm')}</TableCell>
+                      <TableCell>{version.author?.name || 'Non défini'}</TableCell>
                       <TableCell>{version.changeDescription}</TableCell>
                       <TableCell>
                         <Button 

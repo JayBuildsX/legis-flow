@@ -122,7 +122,6 @@ export async function GET(request: NextRequest) {
           where.OR = [
             { title: { contains: searchTerm, mode: 'insensitive' } },
             { referenceNumber: { contains: searchTerm, mode: 'insensitive' } },
-            { description: { contains: searchTerm, mode: 'insensitive' } },
           ];
         }
         
@@ -179,7 +178,7 @@ export async function GET(request: NextRequest) {
         
         // Return success response with documents
         return NextResponse.json({
-          items: formattedDocuments,
+          documents: formattedDocuments,
           total: totalCount,
           page,
           limit: pageSize,
@@ -190,7 +189,7 @@ export async function GET(request: NextRequest) {
         console.error('Error fetching documents from database:', error);
         // Return empty response instead of falling back to mock data
         return NextResponse.json({
-          items: [],
+          documents: [],
           total: 0,
           page,
           limit: pageSize,
@@ -205,7 +204,7 @@ export async function GET(request: NextRequest) {
     
     // Return empty response instead of mock data
     return NextResponse.json({
-      items: [],
+      documents: [],
       total: 0,
       page,
       limit: pageSize, 
@@ -216,7 +215,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error in documents route:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve documents', items: [], total: 0 },
+      { error: 'Failed to retrieve documents', documents: [], total: 0 },
       { status: 500 }
     );
   }
@@ -269,8 +268,8 @@ export async function POST(request: NextRequest) {
           referenceNumber: body.referenceNumber || body.reference_number || `DOC-${Date.now().toString().slice(-6)}`,
           status: 'DRAFT',
           documentTypeId,
-          description: body.description || '',
           keywords: body.tags || [],
+          metadata: body.description ? { description: body.description } : {},
           primaryFormat: body.content_format || 'markdown',
           language: 'en',
           createdById: 'user-001', // This should come from the JWT token

@@ -114,34 +114,69 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
         
         // Fetch document metadata
         setIsLoadingDocument(true);
-        const docResponse = await fetch(`/api/v1/documents/${resolvedParams.id}`);
+        console.log('Fetching document:', resolvedParams.id);
+        
+        const docResponse = await fetch(`/api/v1/documents/${resolvedParams.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'mock-token'}`,
+          }
+        });
+        
+        console.log('Document fetch response status:', docResponse.status);
         
         if (!docResponse.ok) {
-          throw new Error('Failed to fetch document');
+          const errorText = await docResponse.text();
+          console.error('Document fetch failed:', errorText);
+          throw new Error(`Failed to fetch document (${docResponse.status}): ${docResponse.statusText}`);
         }
         
         const docData = await docResponse.json();
-        setDocument(docData);
+        console.log('Fetched document data:', docData);
+        
+        // Handle API response format (might have data wrapper)
+        const document = docData.data || docData;
+        setDocument(document);
         
         // Fetch document content
         setIsLoadingContent(true);
-        const contentResponse = await fetch(`/api/v1/documents/${resolvedParams.id}/content`);
+        console.log('Fetching document content for:', resolvedParams.id);
+        
+        const contentResponse = await fetch(`/api/v1/documents/${resolvedParams.id}/content`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'mock-token'}`,
+          }
+        });
+        
+        console.log('Content fetch response status:', contentResponse.status);
         
         if (!contentResponse.ok) {
-          throw new Error('Failed to fetch document content');
+          const errorText = await contentResponse.text();
+          console.error('Content fetch failed:', errorText);
+          throw new Error(`Failed to fetch document content (${contentResponse.status}): ${contentResponse.statusText}`);
         }
         
         const contentData = await contentResponse.json();
+        console.log('Fetched content data:', contentData);
         setDocumentContent(contentData);
         
         // Update form with fetched data
+        console.log('Resetting form with data:', {
+          title: document.title,
+          description: document.description,
+          referenceNumber: document.reference,
+          status: document.status,
+          confidentiality: document.confidentiality,
+          keywords: document.tags,
+          content: contentData.content
+        });
+        
         form.reset({
-          title: docData.title || '',
-          description: docData.description || '',
-          referenceNumber: docData.reference || '',
-          status: docData.status || 'DRAFT',
-          confidentiality: docData.confidentiality || 'PUBLIC',
-          keywords: docData.tags || [],
+          title: document.title || '',
+          description: document.description || '',
+          referenceNumber: document.reference || '',
+          status: document.status || 'DRAFT',
+          confidentiality: document.confidentiality || 'PUBLIC',
+          keywords: document.tags || [],
           content: contentData.content || '',
         });
         
@@ -190,6 +225,19 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
       
       const formData = form.getValues();
       
+      const metadataPayload = {
+        title: formData.title,
+        description: formData.description,
+        referenceNumber: formData.referenceNumber,
+        status: formData.status,
+        confidentiality: formData.confidentiality,
+        keywords: formData.keywords,
+      };
+      
+      console.log('Saving document metadata:', metadataPayload);
+      console.log('Document ID:', resolvedParams.id);
+      console.log('Auth token:', localStorage.getItem('auth_token') ? 'Present' : 'Missing');
+      
       // Save document metadata
       const metadataResponse = await fetch(`/api/v1/documents/${resolvedParams.id}`, {
         method: 'PUT',
@@ -197,18 +245,31 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'mock-token'}`,
         },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          referenceNumber: formData.referenceNumber,
-          status: formData.status,
-          confidentiality: formData.confidentiality,
-          keywords: formData.keywords,
-        }),
+        body: JSON.stringify(metadataPayload),
       });
+      
+      console.log('Metadata response status:', metadataResponse.status);
+      console.log('Metadata response headers:', Object.fromEntries(metadataResponse.headers.entries()));
 
       if (!metadataResponse.ok) {
-        throw new Error('Failed to save document metadata');
+        console.error('Metadata response not OK:', {
+          status: metadataResponse.status,
+          statusText: metadataResponse.statusText,
+          headers: Object.fromEntries(metadataResponse.headers.entries())
+        });
+        
+        let errorData;
+        try {
+          const responseText = await metadataResponse.text();
+          console.log('Raw error response:', responseText);
+          errorData = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+          console.error('Failed to parse error response as JSON:', parseError);
+          errorData = { message: `HTTP ${metadataResponse.status}: ${metadataResponse.statusText}` };
+        }
+        
+        console.error('Metadata save error:', errorData);
+        throw new Error(errorData.message || `Failed to save document metadata (${metadataResponse.status}): ${metadataResponse.statusText}`);
       }
 
       // Save document content
@@ -225,7 +286,22 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
       });
 
       if (!contentResponse.ok) {
-        throw new Error('Failed to save document content');
+        console.error('Content response not OK:', {
+          status: contentResponse.status,
+          statusText: contentResponse.statusText
+        });
+        
+        let errorData;
+        try {
+          const responseText = await contentResponse.text();
+          errorData = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+          console.error('Failed to parse content error response as JSON:', parseError);
+          errorData = { message: `HTTP ${contentResponse.status}: ${contentResponse.statusText}` };
+        }
+        
+        console.error('Content save error:', errorData);
+        throw new Error(errorData.message || `Failed to save document content (${contentResponse.status}): ${contentResponse.statusText}`);
       }
 
       // Create new version
@@ -242,6 +318,40 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
       });
 
       // Note: Version creation might fail if endpoint doesn't exist, but that's okay
+      
+      // After successful save, refresh the document data to show updated values
+      console.log('Save successful, refreshing document data...');
+      
+      try {
+        // Re-fetch document metadata to get the updated values
+        const refreshResponse = await fetch(`/api/v1/documents/${resolvedParams.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'mock-token'}`,
+          }
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          const updatedDocument = refreshData.data || refreshData;
+          setDocument(updatedDocument);
+          
+          // Update form with refreshed data to show the saved values
+          form.reset({
+            title: updatedDocument.title || '',
+            description: updatedDocument.description || '',
+            referenceNumber: updatedDocument.reference || '',
+            status: updatedDocument.status || 'DRAFT',
+            confidentiality: updatedDocument.confidentiality || 'PUBLIC',
+            keywords: updatedDocument.tags || [],
+            content: formData.content, // Keep the current content
+          });
+          
+          console.log('Document data refreshed successfully');
+        }
+      } catch (refreshError) {
+        console.error('Failed to refresh document data after save:', refreshError);
+        // Don't fail the save operation if refresh fails
+      }
       
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
@@ -475,7 +585,7 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="PUBLIC">Public</SelectItem>
-                              <SelectItem value="INTERNAL">Interne</SelectItem>
+                              <SelectItem value="RESTRICTED">Restreint</SelectItem>
                               <SelectItem value="CONFIDENTIAL">Confidentiel</SelectItem>
                               <SelectItem value="SECRET">Secret</SelectItem>
                             </SelectContent>

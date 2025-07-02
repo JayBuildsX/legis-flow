@@ -101,7 +101,7 @@ export async function GET(
             : `${document.createdBy.firstName || ''} ${document.createdBy.lastName || ''}`.trim() || document.createdBy.email,
           email: document.lastModifiedBy?.email || document.createdBy.email
         },
-        description: document.description,
+        description: document.metadata ? (document.metadata as any).description || '' : '',
         tags: document.keywords || [],
         metadata: document.metadata || {},
         confidentiality: document.confidentiality || 'PUBLIC',
@@ -147,6 +147,15 @@ export async function PUT(
     const documentId = params.id;
     const body = await request.json();
 
+    console.log('PUT /api/v1/documents/[id] - Request body:', body);
+
+    if (!documentId) {
+      return NextResponse.json(
+        { message: 'Document ID is required' },
+        { status: 400 }
+      );
+    }
+
     const db = getPrismaClient();
     if (!db) {
       return NextResponse.json(
@@ -155,33 +164,115 @@ export async function PUT(
       );
     }
 
+    // Check if document exists
+    const existingDocument = await db.document.findUnique({
+      where: { id: documentId }
+    });
+
+    if (!existingDocument) {
+      return NextResponse.json(
+        { message: 'Document not found' },
+        { status: 404 }
+      );
+    }
+
+    // Prepare update data - only include fields that are provided and valid
+    const updateData: any = {
+      lastModifiedDate: new Date(),
+    };
+
+    // Add fields if they're provided
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.referenceNumber !== undefined) updateData.referenceNumber = body.referenceNumber;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.confidentiality !== undefined) updateData.confidentiality = body.confidentiality;
+    if (body.keywords !== undefined) updateData.keywords = body.keywords;
+    
+    // Handle description in metadata (since schema doesn't have description field)
+    if (body.description !== undefined) {
+      const currentMetadata = existingDocument.metadata as any || {};
+      updateData.metadata = {
+        ...currentMetadata,
+        description: body.description
+      };
+    }
+
+    // Get user ID from auth token if available
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        // For now, use the existing document's createdBy ID as fallback
+        updateData.lastModifiedById = existingDocument.createdById;
+      } catch (error) {
+        console.log('Could not decode token, using original creator as modifier');
+        updateData.lastModifiedById = existingDocument.createdById;
+      }
+    } else {
+      updateData.lastModifiedById = existingDocument.createdById;
+    }
+
+    console.log('PUT /api/v1/documents/[id] - Update data:', updateData);
+
     const updatedDocument = await db.document.update({
       where: { id: documentId },
-      data: {
-        title: body.title,
-        description: body.description,
-        content: body.content,
-        status: body.status,
-        keywords: body.tags || [],
-        lastModifiedDate: new Date(),
-        lastModifiedById: 'admin-user-id' // Should come from JWT token
-      },
+      data: updateData,
       include: {
-        createdBy: true,
-        lastModifiedBy: true,
-        documentType: true
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        lastModifiedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        documentType: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     });
 
+    console.log('PUT /api/v1/documents/[id] - Document updated successfully');
+
+    // Format response to match expected structure
+    const formattedDocument = {
+      id: updatedDocument.id,
+      title: updatedDocument.title,
+      reference: updatedDocument.referenceNumber,
+      type: updatedDocument.documentType.name,
+      status: updatedDocument.status,
+      createdAt: updatedDocument.creationDate.toISOString(),
+      updatedAt: updatedDocument.lastModifiedDate.toISOString(),
+      author: {
+        id: updatedDocument.createdBy.id,
+        name: `${updatedDocument.createdBy.firstName || ''} ${updatedDocument.createdBy.lastName || ''}`.trim() || updatedDocument.createdBy.email,
+        email: updatedDocument.createdBy.email
+      },
+      description: updatedDocument.metadata ? (updatedDocument.metadata as any).description || '' : '',
+      tags: updatedDocument.keywords || [],
+      metadata: updatedDocument.metadata || {},
+      confidentiality: updatedDocument.confidentiality || 'PUBLIC'
+    };
+
     return NextResponse.json({
-      data: updatedDocument,
+      data: formattedDocument,
       message: 'Document updated successfully'
     });
 
   } catch (error) {
-    console.error('Error updating document:', error);
+    console.error('PUT /api/v1/documents/[id] - Error updating document:', error);
     return NextResponse.json(
-      { message: 'Failed to update document' },
+      { message: 'Failed to update document', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
